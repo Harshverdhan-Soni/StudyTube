@@ -858,14 +858,17 @@ async function buildRoadmap(refresh){
 }
 async function rmSetStatus(id, st){
   const c = current; if (!c || !c.key) return;
-  c.rmProgress = {...(c.rmProgress || {})};
-  if (st) c.rmProgress[id] = st; else delete c.rmProgress[id];
-  renderRoadmapPane(); rmOpenCard(id);
+  // the engine applies the milestone <-> sub-topic rules and returns the whole progress map
   try {
     const r = await fetch("/api/roadmap/progress", {method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({key: c.key, id, status: st})});
-    if (r.ok) c.rmProgress = (await r.json()).progress || c.rmProgress;
-  } catch {}
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "HTTP " + r.status);
+    c.rmProgress = d.progress || {};
+  } catch (err) { setStatus("Couldn't save roadmap progress: " + err.message, true); return; }
+  if (current !== c) return;
+  renderRoadmapPane();
+  if (!$("#rmCard").classList.contains("hidden")) rmOpenCard(id);
 }
 function rmOpenCard(id){
   const n = rmFind(id); if (!n) return;
@@ -876,6 +879,7 @@ function rmOpenCard(id){
   $("#rmCard .box").innerHTML = `<div class="kind">${kind}</div><h3 id="rmCardTitle">${esc(n.title)}</h3>
     <p>${esc(isMile ? n.summary : n.detail) || "No extra detail in the notes."}</p>
     <div class="row"><span class="seg rm-seg" data-id="${id}">${seg}</span></div>
+    ${isMile && n.subtopics.length ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">Done or Skip here applies to its ${n.subtopics.length} sub-topics too. Ticking every sub-topic completes the milestone.</div>` : ""}
     <div class="row">${n.ts ? `<button type="button" class="primary" data-seek="${toSec(n.ts)}">▶ Watch this part (${n.ts})</button>` : ""}
       <button type="button" data-q="${esc(n.title)}">Find a video on this</button>
       <button type="button" data-rm="cardclose" style="margin-left:auto">Close</button></div>`;

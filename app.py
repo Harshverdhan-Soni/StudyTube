@@ -804,9 +804,59 @@ def api_roadmap():
     rm["lang"] = lang
     saved["roadmap"] = rm
     if b.get("refresh"):
-        saved["roadmap_progress"] = {}
+        saved["roadmap_progress"], saved["roadmap_auto"] = {}, []
     cache_put(key, saved)
     return jsonify(roadmap=rm, progress=saved.get("roadmap_progress", {}))
+
+
+def apply_roadmap_status(rm, prog, auto, node, status):
+    """Set one node's status and keep milestones and their sub-topics consistent.
+
+    * milestone Done / Skip  -> its open sub-topics follow (remembered as automatic)
+    * milestone In progress  -> automatic sub-topic ticks are undone
+    * milestone Reset        -> the whole section is cleared
+    * all sub-topics done    -> the milestone becomes Done automatically
+    * a sub-topic un-done    -> a Done milestone falls back to In progress (or open)
+    Ticks the user made by hand are never overwritten by a cascade.
+    """
+    prog, auto = dict(prog), set(auto)
+
+    def put(nid, st, is_auto):
+        if st:
+            prog[nid] = st
+        else:
+            prog.pop(nid, None)
+        if st and is_auto:
+            auto.add(nid)
+        else:
+            auto.discard(nid)
+
+    mid = re.match(r"^m\d+", node).group(0)
+    mile = next((m for m in rm.get("milestones", []) if m["id"] == mid), None)
+    subs = [x["id"] for x in mile["subtopics"]] if mile else []
+    put(node, status, False)
+
+    if node == mid:                                   # a milestone changed
+        for sid in subs:
+            cur, was_auto = prog.get(sid, ""), sid in auto
+            if status in ("done", "skip"):
+                manual_final = cur in ("done", "skip") and not was_auto
+                if not manual_final:
+                    put(sid, status, True)
+            elif status == "doing":
+                if was_auto:
+                    put(sid, "", False)
+            else:                                     # reset: clear the section
+                put(sid, "", False)
+    elif subs:                                        # a sub-topic changed
+        sts = [prog.get(x, "") for x in subs]
+        complete = all(x in ("done", "skip") for x in sts) and "done" in sts
+        mst = prog.get(mid, "")
+        if complete and mst != "done":
+            put(mid, "done", True)
+        elif not complete and mst == "done":
+            put(mid, "doing" if any(x in ("done", "doing") for x in sts) else "", False)
+    return prog, sorted(auto)
 
 
 @app.post("/api/roadmap/progress")
@@ -816,13 +866,11 @@ def api_roadmap_progress():
     if not KEY_RE.match(key) or not re.match(r"^m\d+(s\d+)?$", node) or status not in RM_STATUS:
         return jsonify(error="bad request"), 400
     saved = cache_get(key)
-    if not saved:
+    if not saved or not saved.get("roadmap"):
         return jsonify(error="These notes are no longer saved."), 404
-    prog = saved.setdefault("roadmap_progress", {})
-    if status:
-        prog[node] = status
-    else:
-        prog.pop(node, None)
+    prog, auto = apply_roadmap_status(saved["roadmap"], saved.get("roadmap_progress", {}),
+                                      saved.get("roadmap_auto", []), node, status)
+    saved["roadmap_progress"], saved["roadmap_auto"] = prog, auto
     cache_put(key, saved)
     return jsonify(progress=prog)
 
@@ -964,7 +1012,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "4.9"
+APP_VERSION = "4.9.1"
 
 
 def settings_state():
