@@ -46,7 +46,7 @@
   .tab.on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--accent)}
   .tabs .sp{flex:1}
   .tabs button.copy{margin-right:10px;padding:6px 10px;font-size:13px}
-  .pane{padding:4px 20px 20px;max-height:calc(100vh - 210px);overflow:auto}
+  .pane{position:relative;padding:4px 20px 20px;max-height:calc(100vh - 210px);overflow:auto}
   @media (max-width:980px){.pane{max-height:none}}
   .pane h2{font-size:17px;margin:20px 0 6px}
   .pane h3{font-size:15px;margin:16px 0 4px}
@@ -54,7 +54,15 @@
   a.ts{color:var(--accent);font-variant-numeric:tabular-nums;text-decoration:none;font-weight:600;cursor:pointer;white-space:nowrap}
   a.ts:hover{text-decoration:underline}
   .tline{display:grid;grid-template-columns:52px 1fr;gap:10px;margin:0;padding:8px 6px;border-radius:8px;line-height:1.6}
+  .tline{cursor:pointer;transition:background .2s}
   .tline:hover{background:var(--accent-soft)}
+  .tline.now{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+  .tline.now a.ts{font-weight:800}
+  #sum li:has(a.ts), #sum h2:has(a.ts), #sum h3:has(a.ts), #sum h4:has(a.ts), #sum p:has(a.ts), #sum tr:has(a.ts){cursor:pointer;border-radius:6px}
+  #sum h3:has(a.ts):hover, #sum h2:has(a.ts):hover, #sum p:has(a.ts):hover, #sum tr:has(a.ts):hover{background:var(--accent-soft)}
+  #sum li:has(a.ts):hover{background:linear-gradient(var(--accent-soft),var(--accent-soft)) no-repeat 0 0/100% 1.6em}
+  .flash{animation:flash .9s ease}
+  @keyframes flash{0%{background:var(--accent);color:#fff}100%{background:transparent}}
   .tline a.ts{font-size:12.5px;padding-top:2px;text-align:right}
   .tline .katex{font-size:1.02em}
   .empty{padding:60px 20px;text-align:center;color:var(--muted)}
@@ -272,8 +280,41 @@ function setStatus(msg, err){ $("#status").textContent = msg || ""; $("#status")
 function busy(on){ $("#go").disabled = on; }
 
 document.addEventListener("click", e => {
-  const a = e.target.closest("a.ts"); if (a) { e.preventDefault(); seek(+a.dataset.t); }
+  const a = e.target.closest("a.ts"); if (a) { e.preventDefault(); seek(+a.dataset.t); return; }
+  if (e.target.closest("a, button, input, select, .katex")) return;
+  if (String(window.getSelection() || "").trim()) return;          // user is selecting text to copy
+  // a transcript line: jump to its time
+  const line = e.target.closest("#tr .tline");
+  if (line) { const t = line.querySelector("a.ts"); if (t) seek(+t.dataset.t); return; }
+  // a notes section (heading, bullet, paragraph, table row) that carries a timestamp
+  const blk = e.target.closest("#sum li, #sum h2, #sum h3, #sum h4, #sum p, #sum tr");
+  if (blk) { const t = blk.querySelector("a.ts"); if (t) { seek(+t.dataset.t); flash(blk); } }
 });
+function flash(el){ el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+
+// ---- follow along: highlight the transcript line that is playing now
+let userScrolledAt = 0;
+["wheel", "touchmove", "keydown"].forEach(ev => $("#tr").addEventListener(ev, () => userScrolledAt = Date.now(), {passive: true}));
+let lastNow = null;
+setInterval(() => {
+  if (!playerReady || !player.getCurrentTime || !current) return;
+  let st; try { st = player.getPlayerState(); } catch { return; }
+  if (st !== 1 && st !== 2) return;                                  // playing or paused only
+  const t = player.getCurrentTime();
+  const lines = $("#tr").querySelectorAll(".tline");
+  let now = null;
+  for (const l of lines) { const a = l.querySelector("a.ts"); if (a && +a.dataset.t <= t + 0.5) now = l; else if (a) break; }
+  if (now === lastNow) return;
+  if (lastNow) lastNow.classList.remove("now");
+  lastNow = now;
+  if (!now) return;
+  now.classList.add("now");
+  const pane = $("#tr"), visible = !pane.classList.contains("hidden") && !$("#main").classList.contains("wide");
+  if (visible && Date.now() - userScrolledAt > 5000) {               // don't fight the reader
+    const r = now.getBoundingClientRect(), pr = pane.getBoundingClientRect();
+    if (r.top < pr.top + 50 || r.bottom > pr.bottom - 20) pane.scrollTo({top: now.offsetTop - pane.clientHeight / 3, behavior: "smooth"});
+  }
+}, 700);
 document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
   document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === t));
   $("#sum").classList.toggle("hidden", t.dataset.p !== "sum");

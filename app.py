@@ -820,7 +820,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "4.6"
+APP_VERSION = "4.7"
 
 
 def settings_state():
