@@ -911,7 +911,20 @@ def stream(gen):
 # ---------------------------------------------------------------- routes
 @app.get("/")
 def index():
-    return render_template("index.html")
+    theme = cfg("THEME", "system").lower()
+    return render_template("index.html", theme=theme if theme in ("system", "light", "dark") else "system")
+
+
+@app.post("/api/theme")
+def api_theme():
+    t = (request.get_json(force=True).get("theme") or "").lower()
+    if t not in ("system", "light", "dark"):
+        return jsonify(error="bad theme"), 400
+    try:
+        save_env({"THEME": t})
+    except OSError:
+        os.environ["THEME"] = t
+    return jsonify(theme=t)
 
 
 @app.post("/api/search")
@@ -951,7 +964,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "4.8"
+APP_VERSION = "4.9"
 
 
 def settings_state():

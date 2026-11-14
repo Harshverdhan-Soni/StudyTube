@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="{{ theme }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,8 +10,10 @@
 <link rel="stylesheet" href="/static/katex/katex.min.css">
 <script src="/static/katex/katex.min.js"></script>
 <style>
-  :root{--bg:#f6f5f1;--card:#fff;--ink:#1d1d1b;--muted:#6b6a65;--line:#e4e2db;--accent:#c2410c;--accent-soft:#fff1e8}
-  @media (prefers-color-scheme:dark){:root{--bg:#161614;--card:#1f1f1c;--ink:#ecebe6;--muted:#9c9a92;--line:#33322e;--accent:#fb923c;--accent-soft:#2a1d13}}
+  /* themes: light by default; dark when chosen, or when 'system' and Windows is in dark mode */
+  :root{--bg:#f6f5f1;--card:#fff;--ink:#1d1d1b;--muted:#6b6a65;--line:#e4e2db;--accent:#c2410c;--accent-soft:#fff1e8;color-scheme:light}
+  :root[data-theme="dark"]{--bg:#161614;--card:#1f1f1c;--ink:#ecebe6;--muted:#9c9a92;--line:#33322e;--accent:#fb923c;--accent-soft:#2a1d13;color-scheme:dark}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161614;--card:#1f1f1c;--ink:#ecebe6;--muted:#9c9a92;--line:#33322e;--accent:#fb923c;--accent-soft:#2a1d13;color-scheme:dark}}
   *{box-sizing:border-box}
   body{margin:0;font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
   header{padding:22px 24px 8px;max-width:1400px;margin:auto}
@@ -110,6 +112,20 @@
   .hbtn{background:none;border:1px solid transparent;font-size:14px;padding:6px 10px;color:var(--muted);font-weight:600;border-radius:9px}
   .hbtn:hover,.hbtn.on{border-color:var(--line);color:var(--ink);background:var(--card)}
   h1 .home{cursor:pointer}
+  .brand{display:flex;align-items:center;gap:12px;font-size:25px;font-weight:800;letter-spacing:-.015em;line-height:1}
+  .brand .logo{width:40px;height:40px;display:block;flex:none}
+  .brand .wm{color:var(--ink)}
+  .brand .wm span{color:#c2410c}
+  :root[data-theme="dark"] .brand .wm span{color:#F7931E}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .brand .wm span{color:#F7931E}}
+  .rm-legend i.lg-opt{background:#3a3934;border-style:dashed;border-color:#8b887f}
+  :root[data-theme="light"] .rm-legend i.lg-opt{background:#ECE8E1}
+  @media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .rm-legend i.lg-opt{background:#ECE8E1}}
+  #themeBtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:34px;padding:0}
+  #themeBtn svg{display:block}
+  /* light theme: softer optional nodes in the roadmap */
+  :root[data-theme="light"] .rm .sub.opt{background:#ECE8E1;color:#1a1a18}
+  @media (prefers-color-scheme:light){:root:not([data-theme="dark"]) .rm .sub.opt{background:#ECE8E1;color:#1a1a18}}
   #recentPanel{position:absolute;right:24px;top:62px;width:min(460px,92vw);max-height:72vh;overflow:auto;z-index:8;
     background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.28);padding:10px}
   #recentPanel input{width:100%;min-width:0;padding:9px 11px;font-size:14px;margin-bottom:6px}
@@ -135,6 +151,7 @@
   .rcard .t{font-size:13.5px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:35px}
   .welcome{text-align:center;color:var(--muted);padding:40px 20px 10px}
   .welcome img{width:84px;height:84px;margin-bottom:8px}
+  .welcome .tagline{font-size:22px;font-weight:800;color:var(--ink);letter-spacing:-.01em;margin-bottom:6px}
   .trbar{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--muted);
     padding:10px 0;margin-bottom:8px;border-bottom:1px dashed var(--line);position:sticky;top:0;background:var(--card)}
   .trbar button{font-size:12px;padding:5px 10px}
@@ -233,8 +250,9 @@
 </head>
 <body>
 <header>
-  <h1><div class="home" id="homeLink" title="Home">Study<span>Tube</span></div>
+  <h1><div class="home brand" id="homeLink" title="Home"><img class="logo" src="/static/icon-192.png" alt=""><span class="wm">Study<span>Tube</span></span></div>
     <div class="hbtns"><button class="hbtn" id="recentBtn" title="Previously searched">🕘 Recent</button>
+    <button class="hbtn" id="themeBtn" type="button" aria-label="Theme"></button>
     <button class="gear" id="gear" title="Settings">⚙</button></div></h1>
   <div id="recentPanel" class="hidden">
     <input id="rfilter" type="text" placeholder="Filter your saved notes…" autocomplete="off">
@@ -287,7 +305,7 @@
   </section>
 </main>
 <div id="empty"><div id="home">
-  <div class="welcome"><img src="/static/icon-192.png" alt=""><div>Type a topic. You'll get the single best video to watch, and notes you can read instead.</div></div>
+  <div class="welcome"><img src="/static/icon-192.png" alt=""><div class="tagline">Study, not scroll.</div><div>Type a topic. You'll get the single best video to watch, and notes you can read instead. No feed, no Shorts, no autoplay.</div></div>
   <div id="homeRecent"></div>
 </div></div>
 
@@ -771,7 +789,7 @@ function roadmapHTML(mode){
       <span><b style="color:var(--ink)">${s.pct}% done</b> · ${s.done} of ${s.total - s.skip}${s.doing ? ` · ${s.doing} in progress` : ""}${s.skip ? ` · ${s.skip} skipped` : ""}</span></div>
     <div class="rm-legend">
       <span><i style="background:#F7931E"></i>Milestone</span><span><i style="background:#F3E7D8"></i>Sub-topic</span>
-      <span><i style="background:#3a3934;border-style:dashed;border-color:#8b887f"></i>Optional</span>
+      <span><i class="lg-opt"></i>Optional</span>
       <span>Click a node to mark it Done, In progress or Skip</span></div>
     ${pre}
     <div class="rm-graph"><svg class="rm-links" aria-hidden="true"></svg>${rows}</div>
@@ -906,6 +924,30 @@ document.addEventListener("keydown", e => {
   if (!$("#rmCard").classList.contains("hidden")) rmCloseCard();
   else if (!$("#rmFull").classList.contains("hidden")) $("#rmFull").classList.add("hidden");
 });
+
+
+// ---- theme: System -> Light -> Dark, saved on this computer
+const THEMES = ["system", "light", "dark"];
+const THEME_ICON = {
+  system: '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4"></path></svg>',
+  light: '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>',
+  dark: '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg>'};
+const THEME_NAME = {system: "System (follows Windows)", light: "Light", dark: "Dark"};
+function applyTheme(t){
+  document.documentElement.dataset.theme = t;
+  $("#themeBtn").innerHTML = THEME_ICON[t];
+  $("#themeBtn").title = `Theme: ${THEME_NAME[t]}. Click to change.`;
+  $("#themeBtn").setAttribute("aria-label", `Theme: ${THEME_NAME[t]}`);
+  // the roadmap's connector lines are measured from the layout, so redraw them
+  requestAnimationFrame(() => { ["#rm", "#rmFull"].forEach(s => { if ($(s).querySelector(".rm")) rmDrawLinks($(s)); }); });
+}
+$("#themeBtn").onclick = async () => {
+  const cur = document.documentElement.dataset.theme || "system";
+  const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
+  applyTheme(next);
+  try { await fetch("/api/theme", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({theme: next})}); } catch {}
+};
+applyTheme(THEMES.includes(document.documentElement.dataset.theme) ? document.documentElement.dataset.theme : "system");
 
 // ---- settings / first run
 let settings = null;

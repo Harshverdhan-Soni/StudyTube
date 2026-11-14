@@ -1,5 +1,7 @@
 # StudyTube
 
+**Study, not scroll.** A distraction-free place to learn from YouTube: no feed, no Shorts, no autoplay. Just the one video you need and notes you can read instead.
+
 Type a topic. You get the **single most relevant YouTube video** (playable in the app) and
 **study notes from its transcript** that you can read instead of watching. The notes include a TL;DR,
 key concepts, detailed notes, revision questions, and clickable timestamps that jump the video.

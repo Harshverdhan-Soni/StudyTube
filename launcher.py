@@ -82,18 +82,51 @@ def browser_app_window(url):
     return None
 
 
-def splash_html():
+def chosen_theme():
+    """THEME from .env (system | light | dark); 'system' asks Windows whether apps use dark mode."""
+    theme = "system"
+    try:
+        for line in (BASE / ".env").read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith("THEME="):
+                theme = line.split("=", 1)[1].strip().lower() or "system"
+    except OSError:
+        pass
+    if theme in ("light", "dark"):
+        return theme
+    if sys.platform == "win32":
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                                r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as k:
+                return "light" if winreg.QueryValueEx(k, "AppsUseLightTheme")[0] else "dark"
+        except OSError:
+            pass
+    return "dark"
+
+
+THEME_COLORS = {
+    "dark": {"bg": "#161614", "ink": "#ecebe6", "muted": "#9c9a92", "accent": "#F7931E", "gif": "splash.gif"},
+    "light": {"bg": "#F6F5F1", "ink": "#12263F", "muted": "#5B5853", "accent": "#C2410C", "gif": "splash-light.gif"},
+}
+
+
+def splash_html(theme):
     import base64
-    gif = base64.b64encode((BASE / "static" / "splash.gif").read_bytes()).decode()
+    c = THEME_COLORS[theme]
+    gif_path = BASE / "static" / c["gif"]
+    if not gif_path.exists():
+        gif_path = BASE / "static" / "splash.gif"
+    gif = base64.b64encode(gif_path.read_bytes()).decode()
     return f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-html,body{{margin:0;height:100%;background:#161614;color:#ecebe6;font:15px system-ui,"Segoe UI",sans-serif;
+html,body{{margin:0;height:100%;background:{c["bg"]};color:{c["ink"]};font:15px system-ui,"Segoe UI",sans-serif;
   display:flex;align-items:center;justify-content:center;user-select:none;overflow:hidden}}
 .c{{text-align:center}} img{{width:160px;height:160px}}
-h1{{font-size:26px;margin:14px 0 6px;letter-spacing:-.01em}} h1 span{{color:#fb923c}}
-p{{color:#9c9a92;margin:0}} .dots::after{{content:"";animation:d 1.2s steps(4) infinite}}
+h1{{font-size:26px;margin:14px 0 4px;letter-spacing:-.01em;font-weight:800}} h1 span{{color:{c["accent"]}}}
+.tag{{color:{c["ink"]};font-weight:600;font-size:16px;margin:0 0 14px}}
+p{{color:{c["muted"]};margin:0}} .dots::after{{content:"";animation:d 1.2s steps(4) infinite}}
 @keyframes d{{0%{{content:""}}25%{{content:"."}}50%{{content:".."}}75%{{content:"..."}}}}
 </style></head><body><div class="c"><img src="data:image/gif;base64,{gif}" alt="">
-<h1>Study<span>Tube</span></h1><p>Getting things ready<span class="dots"></span></p></div></body></html>"""
+<h1>Study<span>Tube</span></h1><p class="tag">Study, not scroll.</p><p>Getting things ready<span class="dots"></span></p></div></body></html>"""
 
 
 SPLASH_MIN_SECONDS = 2.0   # one full page-turn of the animation
@@ -106,8 +139,9 @@ def main():
     # 1) native window: splash first, engine loads behind it
     try:
         import webview
-        window = webview.create_window("StudyTube", html=splash_html(), width=1400, height=900,
-                                       min_size=(900, 600), background_color="#161614",
+        theme = chosen_theme()
+        window = webview.create_window("StudyTube", html=splash_html(theme), width=1400, height=900,
+                                       min_size=(900, 600), background_color=THEME_COLORS[theme]["bg"],
                                        text_select=True, zoomable=True)
         splash_painted = threading.Event()
 

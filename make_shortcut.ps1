@@ -15,7 +15,7 @@ foreach ($p in $places) {
   $lnk.Arguments        = "`"$script`""
   $lnk.WorkingDirectory = $dir
   $lnk.IconLocation     = "$icon,0"
-  $lnk.Description      = "Find the best video for a topic and read its summary"
+  $lnk.Description      = "StudyTube: Study, not scroll."
   $lnk.Save()
   Write-Host "   shortcut: $p\StudyTube.lnk"
   # same taskbar identity as the running app, so a pinned icon and the open window are one button

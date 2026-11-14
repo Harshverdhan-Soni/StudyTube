@@ -104,17 +104,17 @@ def main():
     (ROOT / "static").mkdir(exist_ok=True)
     render(192).save(ROOT / "static" / "icon-192.png")
 
-    # splash animation: page turns, then a short rest
-    bg = (22, 22, 20)
-    out = []
+    # splash animation (dark + light backgrounds): page turns, then a short rest
     steps = [None] * 4 + [0.06 + 0.88 * i / 13 for i in range(14)] + [None] * 4
-    for f in steps:
-        tile = render(200, simple=False, flip=f, scale=3)
-        frame = Image.new("RGB", (240, 240), bg)
-        frame.paste(tile, (20, 20), tile)
-        out.append(frame.convert("P", palette=Image.ADAPTIVE, colors=128))
-    out[0].save(ROOT / "static" / "splash.gif", save_all=True, append_images=out[1:],
-                duration=[90] * 4 + [55] * 14 + [90] * 4, loop=0, disposal=2)
+    for name, bg in (("splash.gif", (22, 22, 20)), ("splash-light.gif", (246, 245, 241))):
+        out = []
+        for f in steps:
+            tile = render(200, simple=False, flip=f, scale=3)
+            frame = Image.new("RGB", (240, 240), bg)
+            frame.paste(tile, (20, 20), tile)
+            out.append(frame.convert("P", palette=Image.ADAPTIVE, colors=128))
+        out[0].save(ROOT / "static" / name, save_all=True, append_images=out[1:],
+                    duration=[90] * 4 + [55] * 14 + [90] * 4, loop=0, disposal=2)
     print("icons written")
 
 
