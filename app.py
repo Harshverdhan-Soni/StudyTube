@@ -594,6 +594,80 @@ def search_events(query, out_lang):
         yield ev("error", msg=f"{type(e).__name__}: {e}")
 
 
+# ---------------------------------------------------------------- quick explain (no video)
+EXPLAIN_SYSTEM = """You are a clear, patient tutor. You explain ONE term or concept to a student.
+Be accurate and concrete. If the term has several meanings, use the one that fits the given context
+(or the most common academic meaning) and say which in one short line at the start of the Definition.
+Write maths in LaTeX: $...$ inline and $$...$$ on its own line. Markdown only, no preamble."""
+
+EXPLAIN_SECTIONS = """Write in {lang}, with exactly these sections:
+
+## Definition
+One or two precise sentences.
+
+## In simple words
+A short, intuitive explanation; add an everyday analogy if it really helps.
+
+## Explanation
+How it works or why it matters, in 3-6 short bullet points or steps. Include key formulas if there are any.
+
+## Example
+One concrete worked example, step by step (a small table or calculation where useful).
+
+## Common mistakes
+1-3 typical misunderstandings. Leave this section out only if there are none.
+
+Then end with one final line, exactly in this form:
+RELATED: term one; term two; term three
+(3-6 closely related terms worth learning next, written in {lang})."""
+
+
+def explain_events(term, out_lang, context):
+    try:
+        ctx = (context or "").strip()[:200]
+        key = h("ex1", term, out_lang, ctx)
+        cached = cache_get(key)
+        if cached and cached.get("summary_md"):
+            yield ev("done", result={**cached, "cached": True})
+            return
+        prompt = (f"Term: {term}\n"
+                  + (f'Context: the student met this term while studying "{ctx}".\n' if ctx else "")
+                  + "\n" + EXPLAIN_SECTIONS.format(lang=out_lang))
+        md = ""
+
+        def write_with(use):
+            nonlocal md
+            for chunk in llm_stream(EXPLAIN_SYSTEM, prompt, max_tokens=4000, use=use):
+                if isinstance(chunk, dict):
+                    yield ev("stage", msg=chunk["switch"])
+                    continue
+                md += chunk
+                yield ev("notes", delta=chunk)
+
+        yield ev("stage", msg=f"Explaining with {provider().title()}…")
+        try:
+            yield from write_with(provider())
+        except ModelBusy:
+            if provider() == "gemini" and cfg("GROQ_API_KEY") and not md:
+                yield ev("stage", msg="Gemini is busy. Explaining with Groq instead…")
+                yield from write_with("groq")
+            else:
+                raise
+        if not md.strip():
+            raise RuntimeError("the AI returned an empty explanation")
+        result = {"kind": "explain", "term": term, "context": ctx, "lang": out_lang, "summary_md": md,
+                  "query": term, "saved_at": time.time(), "key": key}
+        cache_put(key, result)
+        yield ev("done", result=result)
+    except RateLimited as e:
+        yield ev("error", msg=str(e))
+    except ModelBusy as e:
+        yield ev("error", msg=busy_msg(e))
+    except Exception as e:
+        app.logger.exception("explain failed")
+        yield ev("error", msg=f"Couldn't explain it: {e}")
+
+
 def single_video_events(query, video, out_lang, alternatives, redo=False):
     try:
         ok = yield from video_events(query, video, out_lang, alternatives, redo)
@@ -888,8 +962,14 @@ def history_items(limit=200):
             continue
         if not isinstance(d, dict) or "summary_md" not in d:
             continue  # search-result caches, not notes
+        if d.get("kind") == "explain":
+            items.append({"key": f.stem, "kind": "explain", "query": d.get("term", ""),
+                          "title": d.get("term", ""), "channel": "", "duration": "Explanation",
+                          "thumb": "/static/icon-192.png", "video_id": "", "lang": d.get("lang", "English"),
+                          "saved_at": d.get("saved_at") or f.stat().st_mtime})
+            continue
         v = d.get("video", {})
-        items.append({"key": f.stem, "query": d.get("query") or v.get("title", ""),
+        items.append({"key": f.stem, "kind": "video", "query": d.get("query") or v.get("title", ""),
                       "title": v.get("title", ""), "channel": v.get("channel", ""),
                       "duration": v.get("duration", ""), "thumb": v.get("thumb", ""),
                       "video_id": v.get("id", ""), "lang": d.get("lang", "English"),
@@ -984,6 +1064,15 @@ def api_search():
     return stream(search_events(query, body.get("lang") or "English"))
 
 
+@app.post("/api/explain")
+def api_explain():
+    b = request.get_json(force=True)
+    term = re.sub(r"\s+", " ", (b.get("term") or "")).strip()[:120]
+    if not term:
+        return jsonify(error="Type a term to explain."), 400
+    return stream(explain_events(term, b.get("lang") or "English", b.get("context") or ""))
+
+
 @app.post("/api/video")
 def api_video():
     """Summarise a specific alternative the user clicked."""
@@ -1012,7 +1101,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "4.9.2"
+APP_VERSION = "5.0"
 
 
 def settings_state():

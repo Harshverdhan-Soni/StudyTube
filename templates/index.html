@@ -248,6 +248,29 @@
   .linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
   .linkbtn:hover{color:var(--ink)}
   .linkbtn:disabled{opacity:.5;cursor:wait}
+  /* ---- quick explain ---- */
+  .modeseg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
+  .modeseg button{border:0;border-radius:0;background:none;color:var(--muted);font-weight:600;padding:10px 14px;display:inline-flex;align-items:center;gap:7px}
+  .modeseg button.on{background:var(--accent-soft);color:var(--accent)}
+  #exDrawer{position:fixed;top:0;right:0;bottom:0;width:min(600px,100vw);z-index:25;background:var(--card);border-left:1px solid var(--line);
+    box-shadow:-18px 0 40px rgba(0,0,0,.25);display:flex;flex-direction:column}
+  #exDrawer .exhead{display:flex;gap:10px;align-items:flex-start;padding:18px 20px 10px;border-bottom:1px solid var(--line)}
+  #exDrawer .exhead h2{margin:2px 0 2px;font-size:22px;line-height:1.2}
+  #exDrawer .eyebrow{font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--accent)}
+  #exCtx{font-size:12.5px;color:var(--muted)}
+  #exDrawer .iconbtn{flex:none;width:34px;height:34px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+  #exStatus{font-size:12.5px;color:var(--muted);padding:8px 20px 0;min-height:18px}
+  #exBody{flex:1;max-height:none;padding:4px 22px 14px}
+  #exBody h2{font-size:16px;margin:18px 0 6px;color:var(--accent)}
+  #exRelated{padding:0 22px}
+  #exRelated .lbl{font-size:12px;font-weight:700;color:var(--muted);margin:4px 0 8px}
+  #exRelated .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+  #exRelated button{font-size:13px;padding:5px 11px;border-radius:999px}
+  #exRelated button:hover{border-color:var(--accent);color:var(--accent)}
+  #exDrawer .exfoot{display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px 16px;border-top:1px solid var(--line)}
+  #exDrawer .exfoot small{flex-basis:100%;color:var(--muted);font-size:11.5px}
+  #selExplain{position:fixed;z-index:26;padding:7px 12px;font-size:13px;border-radius:9px;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+  .rcard .th.exth,.ritem img.exth{object-fit:contain;padding:18px;box-sizing:border-box;background:var(--accent-soft)}
   .badge{font-size:11px;background:var(--line);border-radius:999px;padding:1px 7px;margin-left:4px;font-weight:600}
 </style>
 </head>
@@ -262,6 +285,10 @@
     <div id="rlist"></div>
   </div>
   <form id="f">
+    <div class="modeseg" role="group" aria-label="What to do">
+      <button type="button" data-mode="video" class="on" aria-pressed="true"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M10 9l5 3-5 3z"></path></svg>Video lesson</button>
+      <button type="button" data-mode="explain" aria-pressed="false"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2z"></path></svg>Explain a term</button>
+    </div>
     <input id="q" type="text" placeholder="What do you want to learn? e.g. backpropagation intuition" autofocus>
     <select id="lang" title="Language of the notes">
       <option>English</option><option>Hindi</option><option>Hinglish</option>
@@ -312,6 +339,22 @@
   <div id="homeRecent"></div>
 </div></div>
 
+<aside id="exDrawer" class="hidden" aria-label="Explanation">
+  <div class="exhead">
+    <button type="button" id="exBack" class="iconbtn hidden" title="Back to the previous term" aria-label="Back">←</button>
+    <div style="flex:1;min-width:0"><div class="eyebrow">QUICK EXPLAIN</div><h2 id="exTerm"></h2><div id="exCtx"></div></div>
+    <button type="button" id="exClose" class="iconbtn" title="Close (Esc)" aria-label="Close">✕</button>
+  </div>
+  <div id="exStatus"></div>
+  <div id="exBody" class="pane"></div>
+  <div id="exRelated"></div>
+  <div class="exfoot">
+    <button type="button" id="exVideo" class="primary">Find a video lesson on this</button>
+    <button type="button" id="exCopy">Copy</button>
+    <small>AI-written explanation. Check important facts in your textbook.</small>
+  </div>
+</aside>
+<button type="button" id="selExplain" class="primary hidden"></button>
 <div id="rmFull" class="hidden"></div>
 <div id="rmCard" class="hidden"><div class="box" role="dialog" aria-modal="true" aria-labelledby="rmCardTitle"></div></div>
 <div id="setup" class="hidden"><form class="box" id="sf">
@@ -535,8 +578,8 @@ function renderTranscript(status){
 }
 
 // read any of the engine's line-by-line event streams
-async function readEvents(url, body, onEvent){
-  const r = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+async function readEvents(url, body, onEvent, signal){
+  const r = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body), signal});
   if (!r.ok || !r.body) { const d = await r.json().catch(() => ({})); throw new Error(d.error || ("HTTP " + r.status)); }
   const reader = r.body.getReader(), dec = new TextDecoder(); let buf = "";
   while (true) {
@@ -739,19 +782,19 @@ function renderHomeRecent(){
   if (!history.length) { el.innerHTML = ""; return; }
   el.innerHTML = `<h3><span>Recent notes (${history.length})</span>${history.length > 12 ? '<button type="button" id="seeAll">See all</button>' : ""}</h3>
     <div class="rgrid">` + history.slice(0, 12).map(h => `<div class="rcard" data-k="${h.key}" title="${esc(h.title)}">
-      <img class="th" src="${thumbOf(h)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='/static/icon-192.png';this.style.objectFit='contain';this.style.padding='10px'">
+      <img class="th${h.kind === "explain" ? " exth" : ""}" src="${thumbOf(h)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='/static/icon-192.png';this.style.objectFit='contain';this.style.padding='10px'">
       <button class="del" data-del="${h.key}" title="Remove from history">×</button>
       <div class="b"><div class="t">${esc(h.title)}</div>
-      <div class="m"><span class="q">${esc(h.query)}</span>${h.duration} · ${ago(h.saved_at)}</div></div></div>`).join("") + "</div>";
+      <div class="m"><span class="q">${h.kind === "explain" ? "Explained" : esc(h.query)}</span>${h.kind === "explain" ? "" : h.duration + " · "}${ago(h.saved_at)}</div></div></div>`).join("") + "</div>";
   const sa = $("#seeAll"); if (sa) sa.onclick = e => { e.stopPropagation(); openRecent(); };
 }
 function renderRecentList(){
   const f = ($("#rfilter").value || "").toLowerCase();
   const list = history.filter(h => !f || (h.title + " " + h.query + " " + h.channel).toLowerCase().includes(f));
   $("#rlist").innerHTML = list.length ? list.map(h => `<div class="ritem" data-k="${h.key}">
-      <img src="${thumbOf(h)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='/static/icon-192.png';this.style.objectFit='contain';this.style.padding='10px'">
+      <img class="${h.kind === "explain" ? "exth" : ""}" src="${thumbOf(h)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='/static/icon-192.png';this.style.objectFit='contain';this.style.padding='10px'">
       <div style="min-width:0;padding-right:24px"><div class="t">${esc(h.title)}</div>
-      <div class="m"><span class="q">${esc(h.query)}</span>${ago(h.saved_at)}${h.lang && h.lang !== "English" ? " · " + esc(h.lang) : ""}</div></div>
+      <div class="m"><span class="q">${h.kind === "explain" ? "Explained" : esc(h.query)}</span>${ago(h.saved_at)}${h.lang && h.lang !== "English" ? " · " + esc(h.lang) : ""}</div></div>
       <button class="del" data-del="${h.key}" title="Remove from history">×</button></div>`).join("")
     : `<div style="padding:14px;color:var(--muted);font-size:13px">${history.length ? "No match." : "Nothing yet. Your searches will appear here."}</div>`;
 }
@@ -773,10 +816,11 @@ document.addEventListener("click", async e => {
   if (!e.target.closest("#recentPanel")) closeRecent();
 });
 async function openSaved(key){
-  if (run) run.abort();
   try {
     const r = await fetch("/api/history/" + key), d = await r.json();
     if (!r.ok) throw new Error(d.error);
+    if (d.kind === "explain") { showSavedExplain(d); return; }
+    if (run) run.abort();
     $("#prog").classList.add("hidden");
     lastQuery = d.query || ""; $("#q").value = lastQuery;
     if (d.lang) $("#lang").value = d.lang;
@@ -1008,6 +1052,120 @@ $("#themeBtn").onclick = async () => {
 };
 applyTheme(THEMES.includes(document.documentElement.dataset.theme) ? document.documentElement.dataset.theme : "system");
 
+// ---- quick explain: one term, no video ---------------------------------------------------
+let searchMode = "video", exRun = null, exCur = null, exStack = [];
+const MODE_TEXT = {
+  video: {ph: "What do you want to learn? e.g. backpropagation intuition", btn: "Find & summarise"},
+  explain: {ph: "Which term or concept? e.g. minterm, entropy, TCP handshake", btn: "Explain"}};
+function setMode(m){
+  searchMode = m;
+  document.querySelectorAll(".modeseg button").forEach(b => { b.classList.toggle("on", b.dataset.mode === m); b.setAttribute("aria-pressed", b.dataset.mode === m); });
+  $("#q").placeholder = MODE_TEXT[m].ph; $("#go").textContent = MODE_TEXT[m].btn;
+}
+document.querySelectorAll(".modeseg button").forEach(b => b.onclick = () => { setMode(b.dataset.mode); $("#q").focus(); });
+
+// "RELATED: a; b; c" is the explanation's last line; show it as clickable chips instead
+function splitRelated(md){
+  const m = md.match(/\n?[ \t]*\**RELATED\**:?\**\s*(.*)\s*$/i);
+  if (!m) return {body: md.replace(/\n[ \t]*R(E(L(A(T(E(D)?)?)?)?)?)?$/i, ""), related: []};
+  return {body: md.slice(0, m.index), related: m[1].split(/[;,]/).map(x => x.replace(/[*_`.]/g, "").trim()).filter(Boolean).slice(0, 6)};
+}
+function exPaint(md, final){
+  const {body, related} = splitRelated(md);
+  $("#exBody").innerHTML = renderRich(body) + (final ? "" : `<span class="caret"></span>`);
+  $("#exRelated").innerHTML = final && related.length ? `<div class="lbl">Related terms: click to explain</div>
+    <div class="chips">${related.map(t => `<button type="button" data-ex="${esc(t)}">${esc(t)}</button>`).join("")}</div>` : "";
+}
+function exOpenShell(term, context){
+  $("#exDrawer").classList.remove("hidden");
+  $("#exTerm").textContent = term;
+  $("#exCtx").textContent = context ? `In the context of: ${context}` : "";
+  $("#exBack").classList.toggle("hidden", !exStack.length);
+  $("#exRelated").innerHTML = "";
+  $("#exBody").scrollTop = 0;
+}
+async function openExplain(term, context, fromBack){
+  term = (term || "").replace(/\s+/g, " ").trim(); if (!term) return;
+  if (!fromBack && exCur && exCur.term !== term) exStack.push(exCur);
+  if (exRun) exRun.abort();
+  const ctrl = new AbortController(); exRun = ctrl;
+  exCur = {term, context: context || "", md: ""};
+  exOpenShell(term, context);
+  $("#exBody").innerHTML = `<div class="skel"><p>Explaining “${esc(term)}”…</p><i style="width:90%"></i><i style="width:76%"></i><i style="width:84%"></i></div>`;
+  $("#exStatus").textContent = "Starting…";
+  let md = "", timer = null;
+  try {
+    await readEvents("/api/explain", {term, context: context || "", lang: $("#lang").value}, e => {
+      if (exRun !== ctrl) return;
+      if (e.type === "stage") $("#exStatus").textContent = e.msg;
+      else if (e.type === "notes") { md += e.delta; if (!timer) timer = setTimeout(() => { timer = null; exPaint(md, false); }, 120); }
+      else if (e.type === "done") {
+        clearTimeout(timer); md = e.result.summary_md; exCur.md = md; exPaint(md, true);
+        $("#exStatus").textContent = e.result.cached ? "From your saved explanations." : "";
+        loadHistory();
+      } else if (e.type === "error") {
+        clearTimeout(timer); if (md) exPaint(md, true);
+        $("#exStatus").innerHTML = `<span style="color:#dc2626">${esc(e.msg)}</span>`;
+      }
+    }, ctrl.signal);
+  } catch (err) {
+    if (err.name !== "AbortError" && exRun === ctrl) $("#exStatus").innerHTML = `<span style="color:#dc2626">${esc(err.message)}</span>`;
+  } finally { if (exRun === ctrl) exRun = null; }
+}
+function showSavedExplain(d){
+  if (exRun) exRun.abort();
+  exStack = []; exCur = {term: d.term, context: d.context || "", md: d.summary_md};
+  exOpenShell(d.term, d.context);
+  exPaint(d.summary_md, true);
+  $("#exStatus").textContent = "From your saved explanations.";
+}
+function closeExplain(){ if (exRun) exRun.abort(); $("#exDrawer").classList.add("hidden"); exStack = []; exCur = null; }
+$("#exClose").onclick = closeExplain;
+$("#exBack").onclick = () => { const prev = exStack.pop(); if (prev) openExplain(prev.term, prev.context, true); };
+$("#exVideo").onclick = () => {
+  if (!exCur) return;
+  if (run) { $("#exStatus").textContent = "Wait for the current video search to finish first."; return; }
+  const t = exCur.term; closeExplain(); setMode("video"); $("#q").value = t; $("#f").requestSubmit();
+};
+$("#exCopy").onclick = async () => {
+  if (!exCur || !exCur.md) return;
+  const {body, related} = splitRelated(exCur.md);
+  try {
+    await navigator.clipboard.writeText(`# ${exCur.term}\n\n${body.trim()}\n${related.length ? "\nRelated: " + related.join(", ") + "\n" : ""}`);
+    $("#exCopy").textContent = "Copied ✓"; setTimeout(() => $("#exCopy").textContent = "Copy", 1500);
+  } catch { $("#exStatus").textContent = "Couldn't copy. Select the text manually."; }
+};
+$("#exDrawer").addEventListener("click", e => { const b = e.target.closest("[data-ex]"); if (b) openExplain(b.dataset.ex, exCur ? (exCur.context || exCur.term) : ""); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#exDrawer").classList.contains("hidden")) closeExplain(); });
+
+// select a word or phrase in the notes, transcript or an explanation -> "Explain …"
+const selBtn = $("#selExplain");
+selBtn.addEventListener("mousedown", e => e.preventDefault());          // keep the selection while clicking
+selBtn.onclick = () => {
+  selBtn.classList.add("hidden");
+  const inEx = selBtn.dataset.area === "ex";
+  const ctx = inEx && exCur ? (exCur.context || exCur.term) : (current && current.video ? current.video.title : "");
+  openExplain(selBtn.dataset.term, ctx);
+  try { getSelection().removeAllRanges(); } catch {}
+};
+document.addEventListener("mouseup", e => {
+  if (e.target.closest("#selExplain")) return;
+  setTimeout(() => {
+    const sel = window.getSelection(), txt = String(sel || "").replace(/\s+/g, " ").trim();
+    const node = sel && sel.rangeCount ? sel.anchorNode : null, el = node && (node.nodeType === 1 ? node : node.parentElement);
+    const area = el && el.closest("#sum, #tr, #exBody");
+    if (!area || txt.length < 2 || txt.length > 60) { selBtn.classList.add("hidden"); return; }
+    const r = sel.getRangeAt(0).getBoundingClientRect();
+    selBtn.textContent = `Explain “${txt.length > 30 ? txt.slice(0, 29) + "…" : txt}”`;
+    selBtn.dataset.term = txt; selBtn.dataset.area = area.id === "exBody" ? "ex" : "notes";
+    selBtn.classList.remove("hidden");
+    const w = selBtn.offsetWidth;
+    selBtn.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + "px";
+    selBtn.style.top = Math.min(window.innerHeight - 50, r.bottom + 8) + "px";
+  }, 0);
+});
+document.addEventListener("scroll", () => selBtn.classList.add("hidden"), true);
+
 // ---- settings / first run
 let settings = null;
 function syncProv(){
@@ -1064,6 +1222,7 @@ loadSettings();
 $("#f").onsubmit = e => {
   e.preventDefault();
   const query = $("#q").value.trim(); if (!query) return;
+  if (searchMode === "explain") { exStack = []; exCur = null; openExplain(query, ""); return; }
   lastQuery = query;
   progStart("search");
   streamRun("/api/search", {query, lang: $("#lang").value});
