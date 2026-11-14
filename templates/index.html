@@ -161,6 +161,73 @@
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
   .seg button{border:0;border-radius:0;padding:5px 10px;font-size:12px;background:none;color:var(--muted)}
   .seg button.on{background:var(--accent);color:#fff}
+  /* ---- roadmap (inspired by roadmap.sh, in StudyTube colours) ---- */
+  .rm{--mile:#F7931E;--mile-ink:#1A1A18;--sub:#F3E7D8;--sub-ink:#1A1A18;--done:#16a34a;--doing:#3b82f6;--link:#8b887f}
+  .rm-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;padding:14px 0 6px}
+  .rm-eyebrow{font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--accent)}
+  .rm-head h2{margin:4px 0 4px;font-size:20px}
+  .rm-head p{margin:0;color:var(--muted);font-size:14px;max-width:62ch}
+  .rm-actions{display:flex;gap:6px;flex-wrap:wrap}
+  .rm-actions button{font-size:12.5px;padding:6px 10px}
+  .rm-prog{display:flex;align-items:center;gap:10px;margin:10px 0 4px;font-size:12.5px;color:var(--muted)}
+  .rm-prog .bar{flex:1;margin:0;height:7px}
+  .rm-prog .bar i{background:var(--done)}
+  .rm-legend{display:flex;flex-wrap:wrap;gap:10px 14px;font-size:12px;color:var(--muted);margin:8px 0 6px}
+  .rm-legend span{display:inline-flex;align-items:center;gap:6px}
+  .rm-legend i{display:inline-block;width:16px;height:11px;border-radius:3px;border:1.5px solid #1a1a18}
+  .rm-pre{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:12px 0 4px;font-size:12.5px;color:var(--muted)}
+  .rm-topic{font-size:12.5px;padding:4px 10px;border-radius:999px;border:1px dashed var(--muted);background:none;color:var(--ink)}
+  .rm-topic:hover{border-color:var(--accent);color:var(--accent)}
+  .rm-graph{position:relative;margin:18px 0 8px}
+  .rm-links{position:absolute;inset:0;pointer-events:none;overflow:visible}
+  .rm-links .spine{stroke:var(--mile);stroke-width:3;fill:none}
+  .rm-links .branch{stroke:var(--link);stroke-width:1.6;stroke-dasharray:5 4;fill:none}
+  .rm-row{position:relative;display:grid;align-items:center;margin-bottom:34px}
+  .rm-compact .rm-row{grid-template-columns:minmax(140px,44%) 1fr;column-gap:34px}
+  .rm-compact .rm-subs.left{display:none}
+  .rm-full .rm-row{grid-template-columns:1fr minmax(220px,300px) 1fr;column-gap:70px}
+  .rm-subs{display:flex;flex-direction:column;gap:9px}
+  .rm-full .rm-subs.left{align-items:flex-end}
+  .rm-full .rm-subs.right{align-items:flex-start}
+  .rm .node{position:relative;z-index:1;display:flex;align-items:center;gap:8px;text-align:left;cursor:pointer;
+    border:2px solid #1a1a18;border-radius:8px;font-weight:600;line-height:1.3;transition:transform .12s, box-shadow .12s}
+  .rm .node:hover{transform:translateY(-1px);box-shadow:0 4px 0 #0006}
+  .rm .node .nt{flex:1;min-width:0}
+  .rm .mile{background:var(--mile);color:var(--mile-ink);padding:12px 14px;font-size:15px;font-weight:800;justify-content:center;text-align:center}
+  .rm .sub{background:var(--sub);color:var(--sub-ink);padding:8px 11px;font-size:13.5px;max-width:300px;width:100%}
+  .rm .sub.opt{background:#3a3934;color:#ecebe6;border-style:dashed;border-color:#8b887f}
+  .rm .nts{font-size:11.5px;font-weight:700;background:#0000001a;border-radius:999px;padding:2px 7px;white-space:nowrap}
+  .rm .sub.opt .nts{background:#ffffff1a}
+  .rm .nts:hover{background:#00000033}
+  .rm .node .st{width:18px;height:18px;border-radius:50%;flex:none;display:none;align-items:center;justify-content:center;font-size:11px;color:#fff}
+  .rm .node.done{opacity:.72}
+  .rm .node.done .nt{text-decoration:line-through;text-decoration-thickness:2px}
+  .rm .node.done .st{display:flex;background:var(--done)}
+  .rm .node.doing{box-shadow:0 0 0 3px var(--doing)}
+  .rm .node.doing .st{display:flex;background:var(--doing)}
+  .rm .node.skip{opacity:.4;filter:grayscale(1)}
+  .rm-next{margin:26px 0 10px}
+  .rm-next h3{font-size:15px;margin:0 0 10px}
+  .rm-next .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+  .rm-next button{text-align:left;padding:12px 14px;border-radius:10px;font-size:13px;line-height:1.4;color:var(--muted)}
+  .rm-next button b{display:block;color:var(--ink);font-size:14px;margin-bottom:3px}
+  .rm-next button:hover{border-color:var(--accent)}
+  .rm-cta{text-align:center;padding:40px 16px;color:var(--muted)}
+  .rm-cta svg{color:var(--accent)}
+  .rm-cta h3{color:var(--ink);font-size:18px;margin:10px 0 6px}
+  .rm-cta p{max-width:46ch;margin:0 auto 16px;font-size:14px;line-height:1.55}
+  #rmFull{position:fixed;inset:0;z-index:20;background:var(--bg);overflow:auto;padding:10px 32px 40px}
+  #rmFull .rm{max-width:1200px;margin:0 auto}
+  #rmCard{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center}
+  #rmCard .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;width:min(440px,92vw)}
+  #rmCard .kind{font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--accent)}
+  #rmCard h3{margin:6px 0 8px;font-size:19px}
+  #rmCard p{margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.55}
+  #rmCard .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+  #rmCard .seg button{padding:7px 12px;font-size:13px}
+  #rmCard .seg button.on[data-st="done"]{background:var(--done)}
+  #rmCard .seg button.on[data-st="doing"]{background:var(--doing)}
+  #rmCard .seg button.on[data-st="skip"]{background:#6b6a65}
   .badge{font-size:11px;background:var(--line);border-radius:999px;padding:1px 7px;margin-left:4px;font-weight:600}
 </style>
 </head>
@@ -209,12 +276,14 @@
     <div class="tabs">
       <button class="tab on" data-p="sum">Summary</button>
       <button class="tab" data-p="tr">Transcript <span class="badge hidden" id="trn"></span></button>
+      <button class="tab" data-p="rm">Roadmap</button>
       <span class="sp"></span>
       <button class="copy tbtn" id="wideBtn" title="Hide the notes panel and make the video wider">⇥ Wide video</button>
       <button class="copy" id="copy">Copy notes</button>
     </div>
     <div class="pane" id="sum"></div>
     <div class="pane hidden" id="tr"></div>
+    <div class="pane hidden" id="rm"></div>
   </section>
 </main>
 <div id="empty"><div id="home">
@@ -222,6 +291,8 @@
   <div id="homeRecent"></div>
 </div></div>
 
+<div id="rmFull" class="hidden"></div>
+<div id="rmCard" class="hidden"><div class="box" role="dialog" aria-modal="true" aria-labelledby="rmCardTitle"></div></div>
 <div id="setup" class="hidden"><form class="box" id="sf">
   <h2>Settings</h2>
   <p>Keys are saved only on this computer (in the app's .env file). Leave a key blank to keep the saved one.</p>
@@ -317,8 +388,8 @@ setInterval(() => {
 }, 700);
 document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
   document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === t));
-  $("#sum").classList.toggle("hidden", t.dataset.p !== "sum");
-  $("#tr").classList.toggle("hidden", t.dataset.p !== "tr");
+  ["sum", "tr", "rm"].forEach(id => $("#" + id).classList.toggle("hidden", t.dataset.p !== id));
+  if (t.dataset.p === "rm") renderRoadmapPane();
 });
 function setWide(on){
   $("#main").classList.toggle("wide", on);
@@ -344,7 +415,8 @@ $("#copy").onclick = async () => {
 let notesMd = "", renderTimer = null, run = null;
 
 function showVideo(v, alts){
-  current = {video: v, alts: alts || [], summary_md: "", transcript: [], transcript_lang: ""};
+  current = {video: v, alts: alts || [], summary_md: "", transcript: [], transcript_lang: "", roadmap: null, rmProgress: {}};
+  $("#rm").innerHTML = "";
   notesMd = "";
   $("#empty").classList.add("hidden");
   $("#main").classList.remove("hidden");
@@ -536,10 +608,12 @@ async function streamRun(url, body){
         else if (e.type === "done") {
           finished = true;
           current.key = e.result.key || current.key;
+          if (e.result.roadmap) { current.roadmap = e.result.roadmap; current.rmProgress = e.result.roadmap_progress || {}; }
           if (!notesMd) { notesMd = e.result.summary_md; showTranscript(e.result.transcript, e.result.transcript_lang, e.result.transcript_en); }
           else if (e.result.transcript_en) { current.transcript_en = e.result.transcript_en; renderTranscript(); }
           current.summary_md = notesMd; clearTimeout(renderTimer); paintNotes(true);
           progEnd("ok"); loadHistory();
+          if (!$("#rm").classList.contains("hidden")) renderRoadmapPane();
         }
         else if (e.type === "error") { finished = true; progEnd("err", e.msg, e.retry !== false);
           if (notesMd) paintNotes(true); }
@@ -635,6 +709,7 @@ async function openSaved(key){
     if (d.lang) $("#lang").value = d.lang;
     showVideo(d.video, d.alternatives || []);
     current.key = d.key || key;
+    current.roadmap = d.roadmap || null; current.rmProgress = d.roadmap_progress || {};
     showTranscript(d.transcript || [], d.transcript_lang || "", d.transcript_en);
     notesMd = d.summary_md; current.summary_md = notesMd; paintNotes(true);
     setStatus("Opened from your saved notes. No new search needed.");
@@ -647,6 +722,190 @@ function goHome(){
 }
 $("#homeLink").onclick = goHome;
 loadHistory();
+
+// ---- learning roadmap (inspired by roadmap.sh) ----------------------------------------
+const RM_STATUS = {done: "Done", doing: "In progress", skip: "Skipped"};
+const RM_ICON = `<svg aria-hidden="true" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4" r="2"></circle><circle cx="12" cy="20" r="2"></circle><circle cx="5" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle><path d="M12 6v12M10.6 5.4 6.4 10.6M13.4 5.4l4.2 5.2"></path></svg>`;
+let rmBuilding = false, rmRebuildArmed = false;
+
+function rmAllNodes(rm){ const out = []; rm.milestones.forEach(m => { out.push(m); m.subtopics.forEach(s => out.push(s)); }); return out; }
+function rmFind(id){ return current && current.roadmap ? rmAllNodes(current.roadmap).find(n => n.id === id) : null; }
+function rmStats(){
+  const nodes = rmAllNodes(current.roadmap), p = current.rmProgress || {};
+  const c = {done: 0, doing: 0, skip: 0};
+  nodes.forEach(n => { if (c[p[n.id]] !== undefined) c[p[n.id]]++; });
+  const counted = nodes.length - c.skip;
+  return {...c, total: nodes.length, pct: counted ? Math.round(100 * c.done / counted) : 0};
+}
+function rmNode(n, kind){
+  const st = (current.rmProgress || {})[n.id] || "";
+  const ts = n.ts ? `<span class="nts" data-seek="${toSec(n.ts)}" title="Jump the video to ${n.ts}">▶ ${n.ts}</span>` : "";
+  const mark = st === "done" ? "✓" : st === "doing" ? "•" : "";
+  const cls = kind === "mile" ? "mile" : "sub" + (n.type === "optional" ? " opt" : "");
+  return `<button type="button" class="node ${cls} ${st}" data-node="${n.id}" title="${esc(n.title)}${st ? " · " + RM_STATUS[st] : ""}">
+    <span class="st" aria-hidden="true">${mark}</span><span class="nt">${esc(n.title)}</span>${ts}</button>`;
+}
+function roadmapHTML(mode){
+  const rm = current.roadmap, s = rmStats();
+  const rows = rm.milestones.map((m, i) => {
+    let left = [], right = m.subtopics;
+    if (mode === "full") {
+      if (m.subtopics.length === 1) { (i % 2 ? left = m.subtopics : right = m.subtopics); if (i % 2) right = []; }
+      else { const half = Math.ceil(m.subtopics.length / 2); left = m.subtopics.slice(0, half); right = m.subtopics.slice(half); }
+    }
+    return `<div class="rm-row"><div class="rm-subs left">${left.map(n => rmNode(n, "sub")).join("")}</div>
+      ${rmNode(m, "mile")}<div class="rm-subs right">${right.map(n => rmNode(n, "sub")).join("")}</div></div>`;
+  }).join("");
+  const pre = rm.prerequisites.length ? `<div class="rm-pre"><span>Before you start:</span>${rm.prerequisites.map(p =>
+      `<button type="button" class="rm-topic" data-q="${esc(p)}" title="Find a video on ${esc(p)}">${esc(p)}</button>`).join("")}</div>` : "";
+  const next = rm.next.length ? `<div class="rm-next"><h3>Where to go next</h3><div class="cards">${rm.next.map(n =>
+      `<button type="button" data-q="${esc(n.title)}"><b>${esc(n.title)} →</b>${esc(n.why)}</button>`).join("")}</div></div>` : "";
+  return `<div class="rm rm-${mode}">
+    <div class="rm-head"><div><div class="rm-eyebrow">LEARNING ROADMAP</div><h2>${esc(rm.title)}</h2><p>${esc(rm.goal)}</p></div>
+      <div class="rm-actions">
+        ${mode === "full" ? `<button type="button" data-rm="close">Close ✕</button>` : `<button type="button" data-rm="full">⤢ Full screen</button>`}
+        <button type="button" data-rm="copy">Copy checklist</button>
+        <button type="button" data-rm="rebuild">${rmRebuildArmed ? "Click again: rebuild & reset progress" : "Rebuild"}</button>
+      </div></div>
+    <div class="rm-prog"><div class="bar"><i style="width:${s.pct}%"></i></div>
+      <span><b style="color:var(--ink)">${s.pct}% done</b> · ${s.done} of ${s.total - s.skip}${s.doing ? ` · ${s.doing} in progress` : ""}${s.skip ? ` · ${s.skip} skipped` : ""}</span></div>
+    <div class="rm-legend">
+      <span><i style="background:#F7931E"></i>Milestone</span><span><i style="background:#F3E7D8"></i>Sub-topic</span>
+      <span><i style="background:#3a3934;border-style:dashed;border-color:#8b887f"></i>Optional</span>
+      <span>Click a node to mark it Done, In progress or Skip</span></div>
+    ${pre}
+    <div class="rm-graph"><svg class="rm-links" aria-hidden="true"></svg>${rows}</div>
+    ${next}</div>`;
+}
+function rmDrawLinks(root){
+  const g = root.querySelector(".rm-graph"); if (!g || !g.offsetParent) return;
+  const svg = g.querySelector(".rm-links"), gr = g.getBoundingClientRect();
+  const rel = r => ({l: r.left - gr.left, r: r.right - gr.left, t: r.top - gr.top, b: r.bottom - gr.top,
+                     cx: (r.left + r.right) / 2 - gr.left, cy: (r.top + r.bottom) / 2 - gr.top});
+  let spine = "", branch = "";
+  const miles = [...g.querySelectorAll(".node.mile")];
+  miles.forEach((m, i) => {
+    const a = rel(m.getBoundingClientRect());
+    if (i) { const p = rel(miles[i - 1].getBoundingClientRect()); spine += `M${p.cx},${p.b} L${a.cx},${a.t} `; }
+    m.parentElement.querySelectorAll(".rm-subs .node").forEach(sn => {
+      const b = rel(sn.getBoundingClientRect()), left = b.cx < a.cx;
+      const x1 = left ? a.l : a.r, x2 = left ? b.r : b.l, mx = (x1 + x2) / 2;
+      branch += `M${x1},${a.cy} C${mx},${a.cy} ${mx},${b.cy} ${x2},${b.cy} `;
+    });
+  });
+  svg.setAttribute("viewBox", `0 0 ${gr.width} ${gr.height}`);
+  svg.innerHTML = `<path class="branch" d="${branch}"></path><path class="spine" d="${spine}"></path>`;
+}
+const rmResize = new ResizeObserver(entries => entries.forEach(e => rmDrawLinks(e.target.closest(".rm") || e.target)));
+function rmMount(container, mode){
+  const keep = container.scrollTop;
+  container.innerHTML = roadmapHTML(mode);
+  container.scrollTop = keep;
+  const g = container.querySelector(".rm-graph");
+  rmResize.observe(g);
+  requestAnimationFrame(() => rmDrawLinks(container));
+}
+function renderRoadmapPane(){
+  const pane = $("#rm");
+  if (!current || !current.video) { pane.innerHTML = ""; return; }
+  if (current.roadmap) { rmMount(pane, "compact"); if (!$("#rmFull").classList.contains("hidden")) rmMount($("#rmFull"), "full"); return; }
+  const ready = current.key && current.summary_md && !(run && !current.key);
+  pane.innerHTML = `<div class="rm-cta">${RM_ICON}
+    <h3>Turn these notes into a learning roadmap</h3>
+    <p>${rmBuilding ? "Building your roadmap from the notes… this usually takes 10–30 seconds."
+       : ready ? "A step-by-step path through this topic, with milestones and sub-topics you can tick off, plus what to learn before and after."
+               : "The roadmap becomes available once the notes have finished."}</p>
+    ${rmBuilding ? `<div class="bar busy" style="max-width:260px;margin:0 auto"><i style="width:60%"></i></div>`
+       : `<button type="button" class="primary" data-rm="build" ${ready ? "" : "disabled"}>Build roadmap</button>`}
+    <div id="rmErr" style="color:#dc2626;font-size:13px;margin-top:12px"></div></div>`;
+}
+async function buildRoadmap(refresh){
+  if (rmBuilding || !current || !current.key) return;
+  const c = current; rmBuilding = true; rmRebuildArmed = false;
+  if (refresh) { c.roadmap = null; }
+  renderRoadmapPane();
+  try {
+    const r = await fetch("/api/roadmap", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({key: c.key, refresh: !!refresh, lang: $("#lang").value})});
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "HTTP " + r.status);
+    c.roadmap = d.roadmap; c.rmProgress = d.progress || {};
+  } catch (err) {
+    rmBuilding = false;
+    if (current === c) { renderRoadmapPane(); const e = $("#rmErr"); if (e) e.textContent = err.message; }
+    return;
+  }
+  rmBuilding = false;
+  if (current === c) renderRoadmapPane();
+}
+async function rmSetStatus(id, st){
+  const c = current; if (!c || !c.key) return;
+  c.rmProgress = {...(c.rmProgress || {})};
+  if (st) c.rmProgress[id] = st; else delete c.rmProgress[id];
+  renderRoadmapPane(); rmOpenCard(id);
+  try {
+    const r = await fetch("/api/roadmap/progress", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({key: c.key, id, status: st})});
+    if (r.ok) c.rmProgress = (await r.json()).progress || c.rmProgress;
+  } catch {}
+}
+function rmOpenCard(id){
+  const n = rmFind(id); if (!n) return;
+  const isMile = /^m\d+$/.test(id), st = (current.rmProgress || {})[id] || "";
+  const kind = isMile ? "MILESTONE" : (n.type === "optional" ? "OPTIONAL SUB-TOPIC" : "SUB-TOPIC");
+  const seg = [["done", "Done"], ["doing", "In progress"], ["skip", "Skip"], ["", "Reset"]].map(([v, l]) =>
+    `<button type="button" data-st="${v}" class="${st === v && v ? "on" : ""}">${l}</button>`).join("");
+  $("#rmCard .box").innerHTML = `<div class="kind">${kind}</div><h3 id="rmCardTitle">${esc(n.title)}</h3>
+    <p>${esc(isMile ? n.summary : n.detail) || "No extra detail in the notes."}</p>
+    <div class="row"><span class="seg rm-seg" data-id="${id}">${seg}</span></div>
+    <div class="row">${n.ts ? `<button type="button" class="primary" data-seek="${toSec(n.ts)}">▶ Watch this part (${n.ts})</button>` : ""}
+      <button type="button" data-q="${esc(n.title)}">Find a video on this</button>
+      <button type="button" data-rm="cardclose" style="margin-left:auto">Close</button></div>`;
+  $("#rmCard").classList.remove("hidden");
+}
+function rmCloseCard(){ $("#rmCard").classList.add("hidden"); }
+function rmChecklist(){
+  const rm = current.roadmap, p = current.rmProgress || {};
+  const line = (n, ind) => `${ind}- [${p[n.id] === "done" ? "x" : " "}] ${ind ? "" : "**"}${n.title}${ind ? "" : "**"}${n.ts ? ` (${n.ts})` : ""}${p[n.id] === "skip" ? " (skipped)" : ""}${n.type === "optional" ? " (optional)" : ""}`;
+  return [`# ${rm.title}`, rm.goal, "",
+    rm.prerequisites.length ? `Before you start: ${rm.prerequisites.join(", ")}\n` : "",
+    ...rm.milestones.flatMap(m => [line(m, ""), ...m.subtopics.map(s => line(s, "  "))]),
+    "", rm.next.length ? "## Where to go next" : "", ...rm.next.map(n => `- ${n.title}: ${n.why}`),
+    "", `Video: ${current.video.title} (https://youtu.be/${current.video.id})`].filter((x, i, a) => x !== "" || a[i - 1] !== "").join("\n");
+}
+function searchTopic(q){
+  if (run) { setStatus("Wait for the current search to finish first.", true); return; }
+  rmCloseCard(); $("#rmFull").classList.add("hidden");
+  $("#q").value = q; $("#f").requestSubmit();
+}
+// one delegated handler for the pane, the full-screen view and the node card
+["#rm", "#rmFull", "#rmCard"].forEach(sel => $(sel).addEventListener("click", async e => {
+  const seekEl = e.target.closest("[data-seek]");
+  if (seekEl) { e.stopPropagation(); rmCloseCard(); $("#rmFull").classList.add("hidden"); seek(+seekEl.dataset.seek); return; }
+  const stEl = e.target.closest(".rm-seg [data-st]");
+  if (stEl) { rmSetStatus(stEl.parentElement.dataset.id, stEl.dataset.st); return; }
+  const q = e.target.closest("[data-q]");
+  if (q) { searchTopic(q.dataset.q); return; }
+  const node = e.target.closest("[data-node]");
+  if (node) { rmOpenCard(node.dataset.node); return; }
+  const act = e.target.closest("[data-rm]");
+  if (!act) { if (e.target.id === "rmCard") rmCloseCard(); return; }
+  const a = act.dataset.rm;
+  if (a === "build") buildRoadmap(false);
+  else if (a === "rebuild") { if (rmRebuildArmed) buildRoadmap(true); else { rmRebuildArmed = true; renderRoadmapPane(); setTimeout(() => { if (rmRebuildArmed) { rmRebuildArmed = false; renderRoadmapPane(); } }, 4000); } }
+  else if (a === "full") { $("#rmFull").classList.remove("hidden"); rmMount($("#rmFull"), "full"); }
+  else if (a === "close") $("#rmFull").classList.add("hidden");
+  else if (a === "cardclose") rmCloseCard();
+  else if (a === "copy") {
+    try { await navigator.clipboard.writeText(rmChecklist()); act.textContent = "Copied ✓"; setTimeout(() => act.textContent = "Copy checklist", 1500); }
+    catch { setStatus("Couldn't copy. Select the text manually.", true); }
+  }
+}));
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!$("#rmCard").classList.contains("hidden")) rmCloseCard();
+  else if (!$("#rmFull").classList.contains("hidden")) $("#rmFull").classList.add("hidden");
+});
 
 // ---- settings / first run
 let settings = null;

@@ -170,7 +170,7 @@ def gemini_models(fast):
     return out[:2] if fast else out   # ranking is optional: don't spend long on it
 
 
-def llm_stream(system, prompt, max_tokens=4000, youtube_url=None, fast=False, use=None):
+def llm_stream(system, prompt, max_tokens=4000, youtube_url=None, fast=False, use=None, json_mode=False):
     """Yield the answer in small text chunks as it is written.
     May also yield {"switch": message} when it has to fall back to another model."""
     p = use or provider()
@@ -182,6 +182,8 @@ def llm_stream(system, prompt, max_tokens=4000, youtube_url=None, fast=False, us
         body = {"systemInstruction": {"parts": [{"text": system}]},
                 "contents": [{"role": "user", "parts": parts}],
                 "generationConfig": {"maxOutputTokens": max_tokens, "temperature": 0.3}}
+        if json_mode:
+            body["generationConfig"]["responseMimeType"] = "application/json"
         models, last = gemini_models(fast), None
         for i, model in enumerate(models):
             if i:
@@ -209,6 +211,7 @@ def llm_stream(system, prompt, max_tokens=4000, youtube_url=None, fast=False, us
             headers={"Authorization": f"Bearer {cfg('GROQ_API_KEY')}"},
             json={"model": cfg("GROQ_FAST_MODEL", "llama-3.1-8b-instant") if fast else cfg("GROQ_MODEL", "llama-3.3-70b-versatile"),
                   "max_tokens": min(max_tokens, 4000), "temperature": 0.3, "stream": True,
+                  **({"response_format": {"type": "json_object"}} if json_mode else {}),
                   "messages": [{"role": "system", "content": system},
                                {"role": "user", "content": prompt}]},
         )
@@ -238,8 +241,9 @@ def llm_stream(system, prompt, max_tokens=4000, youtube_url=None, fast=False, us
         yield from s.text_stream
 
 
-def llm(system, prompt, max_tokens=4000, youtube_url=None, fast=False):
-    text = "".join(c for c in llm_stream(system, prompt, max_tokens, youtube_url, fast) if isinstance(c, str))
+def llm(system, prompt, max_tokens=4000, youtube_url=None, fast=False, json_mode=False):
+    text = "".join(c for c in llm_stream(system, prompt, max_tokens, youtube_url, fast, json_mode=json_mode)
+                   if isinstance(c, str))
     if not text.strip():
         raise RuntimeError("the AI returned an empty answer")
     return text
@@ -696,6 +700,133 @@ def api_translate():
     return stream(translate_events(blocks, b.get("lang") or "the original language", b.get("key") or ""))
 
 
+# ---------------------------------------------------------------- learning roadmap
+ROADMAP_SYSTEM = """You design learning roadmaps in the style of roadmap.sh: a main path of milestones
+in the order a learner should tackle them, each with a few sub-topics branching off it.
+You build the roadmap ONLY from the study notes you are given (they come from one video).
+Answer with JSON only, no prose and no code fences."""
+
+ROADMAP_SHAPE = """Return exactly this JSON shape:
+{
+  "title": "short roadmap title (max 60 chars)",
+  "goal": "one sentence: what the learner can do after following it",
+  "prerequisites": ["0-4 short topic names worth knowing BEFORE this video"],
+  "milestones": [
+    {
+      "title": "milestone name (max 40 chars)",
+      "ts": "timestamp like 3:02 copied from the notes, or empty",
+      "summary": "one or two sentences (max 160 chars)",
+      "subtopics": [
+        {"title": "sub-topic (max 40 chars)", "ts": "timestamp or empty",
+         "detail": "what to understand about it (max 200 chars)", "type": "core or optional"}
+      ]
+    }
+  ],
+  "next": [{"title": "a topic to study after this video", "why": "why it is the natural next step (max 120 chars)"}]
+}
+Rules: 3-8 milestones following the video's teaching order; 2-5 subtopics each; mark a subtopic
+"optional" only if it is a side note or extra; use only timestamps that appear in the notes;
+2-4 "next" topics. Write all text in {lang}."""
+
+TS_RE = re.compile(r"^(?:\d{1,2}:)?\d{1,2}:\d{2}$")
+RM_STATUS = {"done", "doing", "skip", ""}
+
+
+def _clip(x, n):
+    x = re.sub(r"\s+", " ", str(x or "")).strip()
+    return x if len(x) <= n else x[: n - 1].rstrip() + "…"
+
+
+def _ts(x):
+    x = str(x or "").strip().strip("[]")
+    return x if TS_RE.match(x) else ""
+
+
+def parse_roadmap(text):
+    m = re.search(r"\{.*\}", text, re.S)
+    if not m:
+        raise ValueError("the AI did not return a roadmap")
+    raw = json.loads(m.group(0))
+    ms = []
+    for i, mm in enumerate(raw.get("milestones") or []):
+        if not isinstance(mm, dict) or not mm.get("title"):
+            continue
+        subs = []
+        for j, sub in enumerate(mm.get("subtopics") or []):
+            if isinstance(sub, dict) and sub.get("title"):
+                subs.append({"id": f"m{i + 1}s{j + 1}", "title": _clip(sub["title"], 48), "ts": _ts(sub.get("ts")),
+                             "detail": _clip(sub.get("detail"), 260),
+                             "type": "optional" if str(sub.get("type", "")).lower().startswith("opt") else "core"})
+        ms.append({"id": f"m{i + 1}", "title": _clip(mm["title"], 48), "ts": _ts(mm.get("ts")),
+                   "summary": _clip(mm.get("summary"), 220), "subtopics": subs[:6]})
+    if len(ms) < 2:
+        raise ValueError("the roadmap came back too short")
+    return {
+        "title": _clip(raw.get("title"), 70) or "Learning roadmap",
+        "goal": _clip(raw.get("goal"), 200),
+        "prerequisites": [_clip(p, 40) for p in (raw.get("prerequisites") or []) if str(p).strip()][:4],
+        "milestones": ms[:8],
+        "next": [{"title": _clip(n.get("title"), 48), "why": _clip(n.get("why"), 150)}
+                 for n in (raw.get("next") or []) if isinstance(n, dict) and n.get("title")][:4],
+    }
+
+
+@app.post("/api/roadmap")
+def api_roadmap():
+    b = request.get_json(force=True)
+    key = b.get("key") or ""
+    if not KEY_RE.match(key):
+        return jsonify(error="Open or finish a set of notes first."), 400
+    saved = cache_get(key)
+    if not saved or not saved.get("summary_md"):
+        return jsonify(error="These notes are no longer saved."), 404
+    lang = b.get("lang") or saved.get("lang") or "English"
+    if saved.get("roadmap") and not b.get("refresh"):
+        return jsonify(roadmap=saved["roadmap"], progress=saved.get("roadmap_progress", {}))
+    v = saved.get("video", {})
+    prompt = (f'Video: "{v.get("title", "")}" by {v.get("channel", "")} ({v.get("duration", "")})\n'
+              f'The student searched for: "{saved.get("query", "")}"\n\n'
+              + ROADMAP_SHAPE.replace("{lang}", lang) + "\n\nSTUDY NOTES:\n" + saved["summary_md"][:60000])
+    try:
+        text = llm(ROADMAP_SYSTEM, prompt, max_tokens=8000, json_mode=True)
+        try:
+            rm = parse_roadmap(text)
+        except (ValueError, json.JSONDecodeError):
+            text = llm(ROADMAP_SYSTEM, prompt + "\n\nReturn ONLY valid JSON.", max_tokens=8000, json_mode=True)
+            rm = parse_roadmap(text)
+    except RateLimited as e:
+        return jsonify(error=str(e)), 429
+    except ModelBusy as e:
+        return jsonify(error=busy_msg(e)), 503
+    except Exception as e:
+        app.logger.exception("roadmap failed")
+        return jsonify(error=f"Couldn't build the roadmap: {e}"), 500
+    rm["lang"] = lang
+    saved["roadmap"] = rm
+    if b.get("refresh"):
+        saved["roadmap_progress"] = {}
+    cache_put(key, saved)
+    return jsonify(roadmap=rm, progress=saved.get("roadmap_progress", {}))
+
+
+@app.post("/api/roadmap/progress")
+def api_roadmap_progress():
+    b = request.get_json(force=True)
+    key, node, status = b.get("key") or "", str(b.get("id") or ""), b.get("status") or ""
+    if not KEY_RE.match(key) or not re.match(r"^m\d+(s\d+)?$", node) or status not in RM_STATUS:
+        return jsonify(error="bad request"), 400
+    saved = cache_get(key)
+    if not saved:
+        return jsonify(error="These notes are no longer saved."), 404
+    prog = saved.setdefault("roadmap_progress", {})
+    if status:
+        prog[node] = status
+    else:
+        prog.pop(node, None)
+    cache_put(key, saved)
+    return jsonify(progress=prog)
+
+
 # ---------------------------------------------------------------- history (saved notes)
 KEY_RE = re.compile(r"^[0-9a-f]{16}$")
 
@@ -820,7 +951,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "4.7"
+APP_VERSION = "4.8"
 
 
 def settings_state():
