@@ -1012,7 +1012,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "4.9.1"
+APP_VERSION = "4.9.2"
 
 
 def settings_state():

@@ -245,6 +245,9 @@
   #rmCard .seg button.on[data-st="done"]{background:var(--done)}
   #rmCard .seg button.on[data-st="doing"]{background:var(--doing)}
   #rmCard .seg button.on[data-st="skip"]{background:#6b6a65}
+  .linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .linkbtn:hover{color:var(--ink)}
+  .linkbtn:disabled{opacity:.5;cursor:wait}
   .badge{font-size:11px;background:var(--line);border-radius:999px;padding:1px 7px;margin-left:4px;font-weight:600}
 </style>
 </head>
@@ -344,21 +347,69 @@ const $ = s => document.querySelector(s);
 let player = null, playerReady = false, pendingId = null, current = null, lastQuery = "";
 
 // ---- YouTube IFrame API (lets timestamps seek the video)
-const tag = document.createElement("script");
-tag.src = "https://www.youtube.com/iframe_api";
-document.head.appendChild(tag);
-window.onYouTubeIframeAPIReady = () => {
+let currentVideoId = null;
+const lastPos = {id: null, t: 0, playing: false};          // remembered about once a second
+function loadYTApi(){
+  document.querySelectorAll('script[data-ytapi]').forEach(s => s.remove());
+  const tag = document.createElement("script");
+  tag.src = "https://www.youtube.com/iframe_api"; tag.dataset.ytapi = "1";
+  document.head.appendChild(tag);
+}
+function makePlayer(videoId, start, autoplay){
+  playerReady = false;
   player = new YT.Player("player", {
-    playerVars: {rel: 0, modestbranding: 1},
-    events: {onReady: () => { playerReady = true; if (pendingId) player.cueVideoById(pendingId); }}
+    videoId: videoId || undefined,
+    playerVars: {rel: 0, modestbranding: 1, start: Math.floor(start || 0), autoplay: autoplay ? 1 : 0},
+    events: {onReady: () => {
+      playerReady = true;
+      if (videoId && autoplay) { player.seekTo(start || 0, true); player.playVideo(); }       // was playing: carry on
+      else if (videoId) player.cueVideoById({videoId, startSeconds: start || 0});            // was paused: wait at that second
+      else if (pendingId) { currentVideoId = pendingId; player.cueVideoById(pendingId); }
+    }}
   });
-};
-function loadVideo(id){ if (playerReady) player.cueVideoById(id); else pendingId = id; }
+}
+loadYTApi();
+window.onYouTubeIframeAPIReady = () => makePlayer(null, 0, false);
+function loadVideo(id){
+  currentVideoId = id; lastPos.id = id; lastPos.t = 0; lastPos.playing = false;
+  if (playerReady) player.cueVideoById(id); else pendingId = id;
+}
 function seek(sec){
   if (!playerReady) return;
   player.seekTo(sec, true); player.playVideo();
   $(".player").scrollIntoView({behavior:"smooth", block:"nearest"});
 }
+// Refresh: rebuild the player and continue from the same second (and keep playing if it was)
+function refreshVideo(){
+  const id = currentVideoId || (current && current.video && current.video.id);
+  if (!id) return;
+  let t = lastPos.id === id ? lastPos.t : 0, playing = lastPos.id === id && lastPos.playing;
+  try {
+    if (playerReady && player.getCurrentTime) {
+      const ct = player.getCurrentTime(), st = player.getPlayerState();
+      if (ct > 0) t = ct;
+      playing = st === 1 || st === 3 || playing && st !== 2;
+    }
+  } catch {}
+  try { player && player.destroy && player.destroy(); } catch {}
+  $(".player").innerHTML = '<div id="player"></div>';
+  playerReady = false; pendingId = null;
+  const btn = $("#refreshVid"); if (btn) { btn.disabled = true; setTimeout(() => btn.disabled = false, 1500); }
+  setStatus(`Video refreshed. Resuming at ${fmtTime(t)}.`);
+  if (window.YT && YT.Player) makePlayer(id, t, playing);
+  else { window.onYouTubeIframeAPIReady = () => makePlayer(id, t, playing); loadYTApi(); }   // the API itself failed to load
+}
+const fmtTime = s => { s = Math.floor(s || 0); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`; };
+// remember where the video is, so a refresh (even of a frozen player) can resume there
+setInterval(() => {
+  if (!playerReady || !player || !player.getCurrentTime || !currentVideoId) return;
+  try {
+    const st = player.getPlayerState(), t = player.getCurrentTime();
+    if (t > 0) { lastPos.id = currentVideoId; lastPos.t = t; }
+    if (st === 1) lastPos.playing = true; else if (st === 2 || st === 0) lastPos.playing = false;
+  } catch {}
+}, 1000);
 
 // ---- helpers
 const toSec = t => t.split(":").map(Number).reduce((a, b) => a * 60 + b, 0);
@@ -417,6 +468,8 @@ function setWide(on){
 $("#wideBtn").onclick = () => setWide(true);
 $("#showNotes").onclick = () => setWide(false);
 document.addEventListener("keydown", e => {   // W toggles, when not typing
+  if (e.key.toLowerCase() === "r" && !e.ctrlKey && !e.altKey && !e.metaKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)
+      && !$("#main").classList.contains("hidden")) { refreshVideo(); return; }
   if (e.key.toLowerCase() === "w" && !e.ctrlKey && !e.altKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)
       && !$("#main").classList.contains("hidden")) setWide(!$("#main").classList.contains("wide"));
 });
@@ -442,6 +495,7 @@ function showVideo(v, alts){
   $("#meta").innerHTML = `<h2>${esc(v.title)}</h2>
     <small>${esc(v.channel)} · ${v.duration} · ${(v.views||0).toLocaleString()} views · ${v.published || ""}
     · <a href="https://www.youtube.com/watch?v=${v.id}" target="_blank" rel="noopener">Open on YouTube</a>
+    · <button type="button" id="refreshVid" class="linkbtn" title="Reload the video and continue from the same moment (R)">⟳ Refresh video</button>
     <span id="trlang"></span></small>`;
   $("#sum").innerHTML = `<div class="skel"><p>You can start watching now. Notes will appear here as they are written…</p>
     <i style="width:92%"></i><i style="width:80%"></i><i style="width:86%"></i><i style="width:60%"></i></div>`;
@@ -647,6 +701,7 @@ async function streamRun(url, body){
   }
 }
 $("#cancel").onclick = () => run && run.abort();
+document.addEventListener("click", e => { if (e.target.closest("#refreshVid")) refreshVideo(); });
 $("#retry").onclick = () => {
   if (!lastRun || run) return;
   progStart(lastRun.url.endsWith("video") ? "transcript" : "search");
