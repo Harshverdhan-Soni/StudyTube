@@ -7,6 +7,8 @@
 <link rel="icon" type="image/png" href="/static/icon-192.png">
 <script src="/static/marked.min.js"></script>
 <script src="/static/purify.min.js"></script>
+<link rel="stylesheet" href="/static/katex/katex.min.css">
+<script src="/static/katex/katex.min.js"></script>
 <style>
   :root{--bg:#f6f5f1;--card:#fff;--ink:#1d1d1b;--muted:#6b6a65;--line:#e4e2db;--accent:#c2410c;--accent-soft:#fff1e8}
   @media (prefers-color-scheme:dark){:root{--bg:#161614;--card:#1f1f1c;--ink:#ecebe6;--muted:#9c9a92;--line:#33322e;--accent:#fb923c;--accent-soft:#2a1d13}}
@@ -125,6 +127,25 @@
   .trbar{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--muted);
     padding:10px 0;margin-bottom:8px;border-bottom:1px dashed var(--line);position:sticky;top:0;background:var(--card)}
   .trbar button{font-size:12px;padding:5px 10px}
+  /* ---- maths ---- */
+  .pane .katex{font-size:1.06em}
+  .pane .katex-display{margin:.6em 0;overflow-x:auto;overflow-y:hidden;padding:2px 0}
+  .pane table{border-collapse:collapse;margin:10px 0;font-size:14px}
+  .pane th,.pane td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+  .pane th{background:var(--accent-soft)}
+  .pane code{background:var(--accent-soft);padding:1px 5px;border-radius:5px;font-size:.92em}
+
+  /* ---- wide-video layout ---- */
+  .tabs .tbtn{margin-right:6px;padding:6px 10px;font-size:13px}
+  #showNotes{display:none}
+  main.wide{grid-template-columns:minmax(0,1fr) 46px}
+  main.wide .notes .tabs, main.wide .notes .pane{display:none !important}
+  main.wide #showNotes{display:flex;flex-direction:column;align-items:center;gap:10px;width:100%;height:100%;min-height:240px;
+    border:0;border-radius:0;background:none;color:var(--muted);font-weight:600;padding:14px 0;cursor:pointer}
+  main.wide #showNotes:hover{color:var(--accent);background:var(--accent-soft)}
+  main.wide #showNotes span{writing-mode:vertical-rl;letter-spacing:.08em}
+  main.wide .player{width:min(100%, calc((100vh - 230px) * 16 / 9));margin:0 auto}
+  @media (max-width:980px){main.wide{grid-template-columns:1fr}}
   .badge{font-size:11px;background:var(--line);border-radius:999px;padding:1px 7px;margin-left:4px;font-weight:600}
 </style>
 </head>
@@ -168,11 +189,13 @@
     <div class="meta" id="meta"></div>
     <div class="alts" id="alts"></div>
   </section>
-  <section class="card">
+  <section class="card notes">
+    <button type="button" id="showNotes" title="Show the notes again"><b>⇤</b><span>Show notes</span></button>
     <div class="tabs">
       <button class="tab on" data-p="sum">Summary</button>
       <button class="tab" data-p="tr">Transcript <span class="badge hidden" id="trn"></span></button>
       <span class="sp"></span>
+      <button class="copy tbtn" id="wideBtn" title="Hide the notes panel and make the video wider">⇥ Wide video</button>
       <button class="copy" id="copy">Copy notes</button>
     </div>
     <div class="pane" id="sum"></div>
@@ -249,6 +272,19 @@ document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
   $("#sum").classList.toggle("hidden", t.dataset.p !== "sum");
   $("#tr").classList.toggle("hidden", t.dataset.p !== "tr");
 });
+function setWide(on){
+  $("#main").classList.toggle("wide", on);
+  $("#wideBtn").textContent = on ? "⇤ Show notes" : "⇥ Wide video";
+  try { localStorage.setItem("st-wide", on ? "1" : "0"); } catch {}
+}
+$("#wideBtn").onclick = () => setWide(true);
+$("#showNotes").onclick = () => setWide(false);
+document.addEventListener("keydown", e => {   // W toggles, when not typing
+  if (e.key.toLowerCase() === "w" && !e.ctrlKey && !e.altKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)
+      && !$("#main").classList.contains("hidden")) setWide(!$("#main").classList.contains("wide"));
+});
+try { if (localStorage.getItem("st-wide") === "1") setWide(true); } catch {}
+
 $("#copy").onclick = async () => {
   if (!current) return;
   try { await navigator.clipboard.writeText(`# ${current.video.title}\nhttps://youtu.be/${current.video.id}\n\n${current.summary_md}`);
@@ -286,10 +322,27 @@ function showTranscript(blocks, lang){
   $("#redoTr").onclick = redoTranscript;
   if (blocks.length) { $("#trn").textContent = blocks.length; $("#trn").classList.remove("hidden"); }
 }
+// Markdown + LaTeX: maths is lifted out before Markdown runs (so _ and \\ survive),
+// then rendered with KaTeX and put back.
+function renderRich(md){
+  const math = [];
+  const stash = (tex, display) => { math.push({tex, display}); return `@@M${math.length - 1}@@`; };
+  md = md.replace(/\$\$([\s\S]+?)\$\$/g, (_, t) => stash(t, true))
+         .replace(/\\\[([\s\S]+?)\\\]/g, (_, t) => stash(t, true))
+         .replace(/\\\(([\s\S]+?)\\\)/g, (_, t) => stash(t, false))
+         .replace(/(^|[^\\$\w])\$(?!\s)([^$\n]+?)(?<!\s)\$(?![\d$])/g, (_, pre, t) => pre + stash(t, false));
+  let html = DOMPurify.sanitize(marked.parse(linkTimestamps(md)));
+  return html.replace(/@@M(\d+)@@/g, (_, i) => {
+    const {tex, display} = math[+i];
+    if (!window.katex) return esc(display ? `$$${tex}$$` : `$${tex}$`);
+    try { return katex.renderToString(tex, {displayMode: display, throwOnError: false, strict: "ignore"}); }
+    catch { return esc(tex); }
+  });
+}
 function paintNotes(final){
   renderTimer = null;
   const pane = $("#sum"), atBottom = pane.scrollHeight - pane.scrollTop - pane.clientHeight < 60;
-  pane.innerHTML = DOMPurify.sanitize(marked.parse(linkTimestamps(notesMd))) + (final ? "" : `<span class="caret"></span>`);
+  pane.innerHTML = renderRich(notesMd) + (final ? "" : `<span class="caret"></span>`);
   if (!final && atBottom) pane.scrollTop = pane.scrollHeight;   // follow along unless the user scrolled up
 }
 function addNotes(delta){

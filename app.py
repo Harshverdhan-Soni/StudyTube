@@ -439,7 +439,8 @@ Bullet list of the core ideas / definitions / formulas, each with a timestamp.
 ## Detailed notes
 Section-by-section notes following the video's flow. Use ### sub-headings with a
 timestamp, e.g. "### Gradient descent intuition [04:12]". Include worked examples,
-steps and any formulas.
+steps and any formulas. Write all maths in LaTeX: $...$ inline and $$...$$ on its own
+line for display equations (never put $$ inside a sentence).
 
 ## Quick revision questions
 5 short questions with answers (answer in italics on the next line).
@@ -705,7 +706,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "4.3"
+APP_VERSION = "4.4"
 
 
 def settings_state():
