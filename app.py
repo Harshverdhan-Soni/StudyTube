@@ -461,7 +461,7 @@ def notes_prompt(query, video, blocks, out_lang, use=None):
 
 
 def video_prompt(query, video, out_lang):
-    return (f'Student\'s search: "{query}"\nThis is the video "{video['title']}" by '
+    return (f'Student\'s search: "{query}"\nThis is the video "{video["title"]}" by '
             f"{video['channel']} ({video['duration']}). It has no transcript available, so "
             "base the notes on the video's audio and visuals.\n\n" + SECTIONS.format(lang=out_lang))
 
@@ -608,6 +608,91 @@ def busy_msg(e):
     return "Gemini's free servers are overloaded right now (this is on Google's side). Try again in a minute." + tip
 
 
+# ---------------------------------------------------------------- transcript translation
+TS_LINE = re.compile(r"^\s*\[((?:\d{1,2}:)?\d{1,2}:\d{2})\]\s*(.*)$")
+TRANSLATE_CHUNK_CHARS = int(cfg("TRANSLATE_CHUNK_CHARS", "9000"))
+
+TRANSLATE_SYSTEM = """You translate lecture transcripts into clear, natural English.
+Each input line starts with a timestamp like [12:34]. Output exactly one line per input line,
+starting with the SAME timestamp, followed by its English translation. Keep technical terms,
+formulas, names and numbers accurate; fix obvious speech-recognition slips only when the meaning
+is clear. Lines already in English (or Hinglish technical terms) are kept as they are.
+No commentary, no headings, nothing else."""
+
+
+def is_english(lang):
+    return bool(re.match(r"^(en|english)\b", (lang or "").strip().lower()))
+
+
+def translate_chunks(blocks):
+    chunks, cur, size = [], [], 0
+    for b in blocks:
+        if cur and size + len(b) > TRANSLATE_CHUNK_CHARS:
+            chunks.append(cur); cur, size = [], 0
+        cur.append(b); size += len(b) + 1
+    if cur:
+        chunks.append(cur)
+    return chunks
+
+
+def translate_events(blocks, src_lang, key):
+    try:
+        if key and KEY_RE.match(key):
+            saved = cache_get(key)
+            if saved and saved.get("transcript_en") and len(saved["transcript_en"]) == len(blocks):
+                yield ev("done", blocks=saved["transcript_en"], cached=True)
+                return
+        chunks = translate_chunks(blocks)
+        out, done_lines = [], 0
+        yield ev("progress", pct=2, msg=f"Translating {len(blocks)} lines from {src_lang} to English…")
+        for i, chunk in enumerate(chunks):
+            prompt = f"Source language: {src_lang}\n\n" + "\n".join(chunk)
+            got = {}
+
+            def absorb(text):
+                for line in text.splitlines():
+                    m = TS_LINE.match(line)
+                    if m and m.group(2).strip():
+                        got.setdefault(m.group(1), m.group(2).strip())
+
+            absorb(llm(TRANSLATE_SYSTEM, prompt, max_tokens=8000))
+            missing = [b for b in chunk if (TS_LINE.match(b) or [None, None])[1] not in got]
+            if missing and len(missing) < len(chunk):   # model skipped some lines: one retry for just those
+                absorb(llm(TRANSLATE_SYSTEM, f"Source language: {src_lang}\n\n" + "\n".join(missing), max_tokens=4000))
+            # align by timestamp; anything still missing keeps its original line
+            for b in chunk:
+                m = TS_LINE.match(b)
+                if m and m.group(1) in got:
+                    out.append(f"[{m.group(1)}] {got[m.group(1)]}")
+                else:
+                    out.append(b)
+            done_lines += len(chunk)
+            yield ev("progress", pct=int(100 * done_lines / len(blocks)),
+                     msg=f"Translated {done_lines} of {len(blocks)} lines…", partial=out)
+        if key and KEY_RE.match(key):
+            saved = cache_get(key)
+            if saved:
+                saved["transcript_en"] = out
+                cache_put(key, saved)
+        yield ev("done", blocks=out)
+    except RateLimited as e:
+        yield ev("error", msg=str(e))
+    except ModelBusy as e:
+        yield ev("error", msg=busy_msg(e))
+    except Exception as e:
+        app.logger.exception("translate failed")
+        yield ev("error", msg=f"Translation failed: {e}")
+
+
+@app.post("/api/translate")
+def api_translate():
+    b = request.get_json(force=True)
+    blocks = [x for x in (b.get("blocks") or []) if isinstance(x, str)]
+    if not blocks:
+        return jsonify(error="Nothing to translate."), 400
+    return stream(translate_events(blocks, b.get("lang") or "the original language", b.get("key") or ""))
+
+
 # ---------------------------------------------------------------- history (saved notes)
 KEY_RE = re.compile(r"^[0-9a-f]{16}$")
 
@@ -706,7 +791,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "4.4"
+APP_VERSION = "4.5"
 
 
 def settings_state():

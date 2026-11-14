@@ -146,6 +146,10 @@
   main.wide #showNotes span{writing-mode:vertical-rl;letter-spacing:.08em}
   main.wide .player{width:min(100%, calc((100vh - 230px) * 16 / 9));margin:0 auto}
   @media (max-width:980px){main.wide{grid-template-columns:1fr}}
+  .trtools{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{border:0;border-radius:0;padding:5px 10px;font-size:12px;background:none;color:var(--muted)}
+  .seg button.on{background:var(--accent);color:#fff}
   .badge{font-size:11px;background:var(--line);border-radius:999px;padding:1px 7px;margin-left:4px;font-weight:600}
 </style>
 </head>
@@ -311,16 +315,67 @@ function showVideo(v, alts){
   $("#trn").classList.add("hidden");
   if (alts) renderAlts(alts);
 }
-function showTranscript(blocks, lang){
+const isEnglish = lang => /^(en|english)\b/i.test((lang || "").trim());
+function showTranscript(blocks, lang, english){
   current.transcript = blocks; current.transcript_lang = lang;
+  current.transcript_en = english || current.transcript_en || null;
+  current.trView = current.trView || "orig";
   $("#trlang").textContent = " · transcript: " + lang;
-  const bar = `<div class="trbar"><span>Source: ${esc(lang || "unknown")}</span>
-    <button type="button" id="redoTr" title="Ignore YouTube's captions and transcribe the video again">Looks wrong? Re-transcribe</button></div>`;
-  $("#tr").innerHTML = bar + (blocks.length
-    ? blocks.map(b => `<p class="tline">${linkTimestamps(esc(b))}</p>`).join("")
-    : `<p class="empty">This video has no transcript. The notes were made from the video itself.</p>`);
-  $("#redoTr").onclick = redoTranscript;
   if (blocks.length) { $("#trn").textContent = blocks.length; $("#trn").classList.remove("hidden"); }
+  renderTranscript();
+}
+function renderTranscript(status){
+  const c = current, lines = (c.trView === "en" && c.transcript_en) ? c.transcript_en : c.transcript;
+  const foreign = c.transcript.length && !isEnglish(c.transcript_lang);
+  let tools = "";
+  if (foreign && c.transcript_en) {
+    tools = `<span class="seg"><button type="button" data-tv="orig" class="${c.trView !== "en" ? "on" : ""}">Original</button><button type="button" data-tv="en" class="${c.trView === "en" ? "on" : ""}">English</button></span>`;
+  } else if (foreign) {
+    tools = `<button type="button" id="trBtn" class="primary" ${c.translating ? "disabled" : ""}>${c.translating ? "Translating…" : "Translate to English"}</button>`;
+  }
+  const bar = `<div class="trbar"><span>Source: ${esc(c.transcript_lang || "unknown")}${status ? ` · <b>${esc(status)}</b>` : ""}</span>
+    <span class="trtools">${tools}
+    <button type="button" id="redoTr" title="Ignore YouTube's captions and transcribe the video again">Looks wrong? Re-transcribe</button></span></div>`;
+  const keepScroll = $("#tr").scrollTop;
+  $("#tr").innerHTML = bar + (lines.length
+    ? lines.map(b => `<p class="tline">${linkTimestamps(esc(b))}</p>`).join("")
+    : `<p class="empty">This video has no transcript. The notes were made from the video itself.</p>`);
+  $("#tr").scrollTop = keepScroll;
+  $("#redoTr").onclick = redoTranscript;
+  if ($("#trBtn")) $("#trBtn").onclick = translateTranscript;
+  $("#tr").querySelectorAll("[data-tv]").forEach(btn => btn.onclick = () => { current.trView = btn.dataset.tv; renderTranscript(); });
+}
+
+// read any of the engine's line-by-line event streams
+async function readEvents(url, body, onEvent){
+  const r = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  if (!r.ok || !r.body) { const d = await r.json().catch(() => ({})); throw new Error(d.error || ("HTTP " + r.status)); }
+  const reader = r.body.getReader(), dec = new TextDecoder(); let buf = "";
+  while (true) {
+    const {value, done} = await reader.read(); if (done) break;
+    buf += dec.decode(value, {stream: true}); let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) { const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1); if (line) onEvent(JSON.parse(line)); }
+  }
+}
+async function translateTranscript(){
+  const c = current; if (!c || c.translating) return;
+  c.translating = true; renderTranscript("starting…");
+  try {
+    await readEvents("/api/translate", {blocks: c.transcript, lang: c.transcript_lang, key: c.key || ""}, e => {
+      if (current !== c) return;                       // user moved to another video
+      if (e.type === "progress") {
+        if (e.partial) { c.transcript_en = e.partial.concat(c.transcript.slice(e.partial.length)); c.trView = "en"; }
+        renderTranscript(`translating ${e.pct}%`);
+      } else if (e.type === "done") {
+        c.transcript_en = e.blocks; c.trView = "en"; c.translating = false;
+        renderTranscript(e.cached ? "English (saved)" : "translated");
+      } else if (e.type === "error") {
+        c.translating = false; if (!e.partial) c.transcript_en = null;
+        renderTranscript(); setStatus(e.msg, true);
+      }
+    });
+  } catch (err) { c.translating = false; renderTranscript(); setStatus("Translation failed: " + err.message, true); }
+  finally { if (c.translating) { c.translating = false; renderTranscript(); } }
 }
 // Markdown + LaTeX: maths is lifted out before Markdown runs (so _ and \\ survive),
 // then rendered with KaTeX and put back.
@@ -423,7 +478,9 @@ async function streamRun(url, body){
         else if (e.type === "skip") { $("#pmsg").textContent = e.msg; }
         else if (e.type === "done") {
           finished = true;
-          if (!notesMd) { notesMd = e.result.summary_md; showTranscript(e.result.transcript, e.result.transcript_lang); }
+          current.key = e.result.key || current.key;
+          if (!notesMd) { notesMd = e.result.summary_md; showTranscript(e.result.transcript, e.result.transcript_lang, e.result.transcript_en); }
+          else if (e.result.transcript_en) { current.transcript_en = e.result.transcript_en; renderTranscript(); }
           current.summary_md = notesMd; clearTimeout(renderTimer); paintNotes(true);
           progEnd("ok"); loadHistory();
         }
@@ -520,7 +577,8 @@ async function openSaved(key){
     lastQuery = d.query || ""; $("#q").value = lastQuery;
     if (d.lang) $("#lang").value = d.lang;
     showVideo(d.video, d.alternatives || []);
-    showTranscript(d.transcript || [], d.transcript_lang || "");
+    current.key = d.key || key;
+    showTranscript(d.transcript || [], d.transcript_lang || "", d.transcript_en);
     notesMd = d.summary_md; current.summary_md = notesMd; paintNotes(true);
     setStatus("Opened from your saved notes. No new search needed.");
   } catch (err) { setStatus(err.message || "Couldn't open these notes.", true); loadHistory(); }
