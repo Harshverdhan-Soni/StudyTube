@@ -139,6 +139,7 @@ def open_stream(url, tries=2, **kw):
         wait = r.headers.get("retry-after")
         time.sleep(min(float(wait), 6) if wait and wait.replace(".", "").isdigit() else 3)
     if r.ok:
+        r.encoding = "utf-8"   # SSE has no charset header; requests would assume Latin-1
         return r
     host = url.split("/")[2]
     try:
@@ -617,6 +618,8 @@ Each input line starts with a timestamp like [12:34]. Output exactly one line pe
 starting with the SAME timestamp, followed by its English translation. Keep technical terms,
 formulas, names and numbers accurate; fix obvious speech-recognition slips only when the meaning
 is clear. Lines already in English (or Hinglish technical terms) are kept as they are.
+Write mathematical expressions in LaTeX inside single dollars, e.g. $X \\cdot Y + Y \\cdot Z$, $X'$, $1$.
+Use plain punctuation (commas, full stops); keep each line as flowing sentences.
 No commentary, no headings, nothing else."""
 
 
@@ -640,7 +643,7 @@ def translate_events(blocks, src_lang, key):
         if key and KEY_RE.match(key):
             saved = cache_get(key)
             if saved and saved.get("transcript_en") and len(saved["transcript_en"]) == len(blocks):
-                yield ev("done", blocks=saved["transcript_en"], cached=True)
+                yield ev("done", blocks=[fix_mojibake(x) for x in saved["transcript_en"]], cached=True)
                 return
         chunks = translate_chunks(blocks)
         out, done_lines = [], 0
@@ -721,6 +724,30 @@ def api_history():
     return jsonify(history_items())
 
 
+MOJIBAKE = re.compile("[\u00c2\u00c3\u00e2][\u0080-\u00bf]")
+
+
+def fix_mojibake(text):
+    """Undo UTF-8 text that was decoded as Latin-1 (e.g. 'â€”' -> '—')."""
+    if not isinstance(text, str) or not MOJIBAKE.search(text):
+        return text
+    try:
+        return text.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return text
+
+
+def repair_saved(d):
+    changed = False
+    for k in ("summary_md",):
+        if k in d:
+            new = fix_mojibake(d[k]); changed |= new != d[k]; d[k] = new
+    for k in ("transcript", "transcript_en"):
+        if isinstance(d.get(k), list):
+            new = [fix_mojibake(x) for x in d[k]]; changed |= new != d[k]; d[k] = new
+    return changed
+
+
 @app.get("/api/history/<key>")
 def api_history_open(key):
     if not KEY_RE.match(key):
@@ -728,6 +755,8 @@ def api_history_open(key):
     d = cache_get(key)
     if not d:
         return jsonify(error="These notes are no longer saved."), 404
+    if repair_saved(d):
+        cache_put(key, d)
     d.setdefault("query", d.get("video", {}).get("title", ""))
     d.setdefault("alternatives", [])
     return jsonify(d)
@@ -791,7 +820,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "4.5"
+APP_VERSION = "4.6"
 
 
 def settings_state():

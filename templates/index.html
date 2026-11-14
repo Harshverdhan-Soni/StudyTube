@@ -53,7 +53,10 @@
   .pane li{margin:3px 0}
   a.ts{color:var(--accent);font-variant-numeric:tabular-nums;text-decoration:none;font-weight:600;cursor:pointer;white-space:nowrap}
   a.ts:hover{text-decoration:underline}
-  .tline{margin:0 0 10px}
+  .tline{display:grid;grid-template-columns:52px 1fr;gap:10px;margin:0;padding:8px 6px;border-radius:8px;line-height:1.6}
+  .tline:hover{background:var(--accent-soft)}
+  .tline a.ts{font-size:12.5px;padding-top:2px;text-align:right}
+  .tline .katex{font-size:1.02em}
   .empty{padding:60px 20px;text-align:center;color:var(--muted)}
   .hidden{display:none !important}
   .gear{background:none;border:0;font-size:18px;padding:4px 8px;color:var(--muted)}
@@ -319,7 +322,7 @@ const isEnglish = lang => /^(en|english)\b/i.test((lang || "").trim());
 function showTranscript(blocks, lang, english){
   current.transcript = blocks; current.transcript_lang = lang;
   current.transcript_en = english || current.transcript_en || null;
-  current.trView = current.trView || "orig";
+  current.trView = current.trView || (current.transcript_en ? "en" : "orig");   // translated before? open in English
   $("#trlang").textContent = " · transcript: " + lang;
   if (blocks.length) { $("#trn").textContent = blocks.length; $("#trn").classList.remove("hidden"); }
   renderTranscript();
@@ -338,7 +341,7 @@ function renderTranscript(status){
     <button type="button" id="redoTr" title="Ignore YouTube's captions and transcribe the video again">Looks wrong? Re-transcribe</button></span></div>`;
   const keepScroll = $("#tr").scrollTop;
   $("#tr").innerHTML = bar + (lines.length
-    ? lines.map(b => `<p class="tline">${linkTimestamps(esc(b))}</p>`).join("")
+    ? lines.map(renderLine).join("")
     : `<p class="empty">This video has no transcript. The notes were made from the video itself.</p>`);
   $("#tr").scrollTop = keepScroll;
   $("#redoTr").onclick = redoTranscript;
@@ -379,20 +382,33 @@ async function translateTranscript(){
 }
 // Markdown + LaTeX: maths is lifted out before Markdown runs (so _ and \\ survive),
 // then rendered with KaTeX and put back.
-function renderRich(md){
-  const math = [];
+function stashMath(text, math, allowDisplay){
   const stash = (tex, display) => { math.push({tex, display}); return `@@M${math.length - 1}@@`; };
-  md = md.replace(/\$\$([\s\S]+?)\$\$/g, (_, t) => stash(t, true))
-         .replace(/\\\[([\s\S]+?)\\\]/g, (_, t) => stash(t, true))
-         .replace(/\\\(([\s\S]+?)\\\)/g, (_, t) => stash(t, false))
-         .replace(/(^|[^\\$\w])\$(?!\s)([^$\n]+?)(?<!\s)\$(?![\d$])/g, (_, pre, t) => pre + stash(t, false));
-  let html = DOMPurify.sanitize(marked.parse(linkTimestamps(md)));
+  return text.replace(/\$\$([\s\S]+?)\$\$/g, (_, t) => stash(t, allowDisplay))
+             .replace(/\\\[([\s\S]+?)\\\]/g, (_, t) => stash(t, allowDisplay))
+             .replace(/\\\(([\s\S]+?)\\\)/g, (_, t) => stash(t, false))
+             .replace(/(^|[^\\$\w])\$(?!\s)([^$\n]+?)(?<!\s)\$(?![\d$])/g, (_, pre, t) => pre + stash(t, false));
+}
+function unstashMath(html, math){
   return html.replace(/@@M(\d+)@@/g, (_, i) => {
     const {tex, display} = math[+i];
     if (!window.katex) return esc(display ? `$$${tex}$$` : `$${tex}$`);
     try { return katex.renderToString(tex, {displayMode: display, throwOnError: false, strict: "ignore"}); }
     catch { return esc(tex); }
   });
+}
+// Notes: Markdown + LaTeX
+function renderRich(md){
+  const math = [];
+  return unstashMath(DOMPurify.sanitize(marked.parse(linkTimestamps(stashMath(md, math, true)))), math);
+}
+// Transcript line: "[mm:ss] text" -> clickable time + text with inline maths
+function renderLine(line){
+  const math = [];
+  const m = line.match(/^\s*\[((?:\d{1,2}:)?\d{1,2}:\d{2})\]\s*([\s\S]*)$/);
+  const ts = m ? m[1] : "", body = m ? m[2] : line;
+  const html = unstashMath(esc(stashMath(body, math, false)), math);
+  return `<p class="tline">${ts ? `<a class="ts" data-t="${toSec(ts)}">${ts}</a>` : `<span></span>`}<span class="tx">${html}</span></p>`;
 }
 function paintNotes(final){
   renderTimer = null;
