@@ -124,6 +124,10 @@ def post_with_retry(url, tries=3, **kw):
 
 
 # ---------------------------------------------------------------- LLM providers
+class ThinkingRejected(Exception):
+    """The model does not accept the thinking setting we sent."""
+
+
 class ModelBusy(Exception):
     """The model is overloaded / unavailable / unknown: worth trying another one."""
 
@@ -135,6 +139,8 @@ def open_stream(url, tries=2, **kw):
         r = requests.post(url, stream=True, timeout=timeout, **kw)
         if r.status_code not in (429, 500, 502, 503, 504) or attempt == tries - 1:
             break
+        if r.status_code == 429 and "quota" in r.text.lower():
+            break                      # a used-up quota won't recover in 3 seconds: switch model now
         r.close()
         wait = r.headers.get("retry-after")
         time.sleep(min(float(wait), 6) if wait and wait.replace(".", "").isdigit() else 3)
@@ -148,6 +154,8 @@ def open_stream(url, tries=2, **kw):
         detail = r.text[:200]
     if r.status_code in (404, 429, 500, 502, 503, 504):
         raise ModelBusy(f"{host} {r.status_code}: {detail}")
+    if r.status_code == 400 and "think" in detail.lower():
+        raise ThinkingRejected(detail)
     raise RuntimeError(f"{host} returned {r.status_code}: {detail}")
 
 
@@ -170,6 +178,29 @@ def gemini_models(fast):
     return out[:2] if fast else out   # ranking is optional: don't spend long on it
 
 
+# Gemini "thinks" before it writes; by default that can take a minute or more on long inputs.
+# SPEED: fast (default) | balanced | thorough. 2.5 models use thinkingBudget, newer ones thinkingLevel.
+SPEED_LEVEL = {"fast": "minimal", "balanced": "low", "thorough": None}
+SPEED_BUDGET = {"fast": 0, "balanced": 1024, "thorough": None}
+NO_THINKING_CFG = set()          # models that rejected our setting (remembered while the app runs)
+
+
+def thinking_config(model, fast):
+    speed = "fast" if fast else cfg("AI_SPEED", "fast").lower()
+    if model in NO_THINKING_CFG or speed not in SPEED_LEVEL:
+        return None
+    if "2.5" in model or "2.0" in model:
+        b = SPEED_BUDGET[speed]
+        return None if b is None else {"thinkingBudget": b}
+    lvl = SPEED_LEVEL[speed]
+    return None if lvl is None else {"thinkingLevel": lvl}
+
+
+def first_wait(fast):
+    """Seconds to wait for the first words before trying the next model."""
+    return int(cfg("FIRST_TOKEN_TIMEOUT", "25" if fast else "75"))
+
+
 def llm_stream(system, prompt, max_tokens=4000, youtube_url=None, fast=False, use=None, json_mode=False):
     """Yield the answer in small text chunks as it is written.
     May also yield {"switch": message} when it has to fall back to another model."""
@@ -187,21 +218,46 @@ def llm_stream(system, prompt, max_tokens=4000, youtube_url=None, fast=False, us
         models, last = gemini_models(fast), None
         for i, model in enumerate(models):
             if i:
-                yield {"switch": f"{models[i-1]} is busy, trying {model}…"}
-            try:
-                r = open_stream(
-                    f"https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse",
-                    headers={"x-goog-api-key": gemini_key(), "Content-Type": "application/json"},
-                    json=body, timeout=(15, 60 if fast else 300))
-            except ModelBusy as e:
-                last = e
-                app.logger.info("gemini model %s unavailable: %s", model, e)
+                yield {"switch": f"{models[i-1]} is slow or busy, trying {model}…"}
+            t0, started = time.time(), False
+            for attempt in (1, 2):                    # 2nd attempt only if the thinking setting was rejected
+                cfg_body = json.loads(json.dumps(body))
+                tc = thinking_config(model, fast)
+                if tc:
+                    cfg_body["generationConfig"]["thinkingConfig"] = tc
+                try:
+                    r = open_stream(
+                        f"https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse",
+                        headers={"x-goog-api-key": gemini_key(), "Content-Type": "application/json"},
+                        json=cfg_body, timeout=(15, 180 if youtube_url else first_wait(fast)))
+                    break
+                except ThinkingRejected as e:
+                    app.logger.info("model %s rejected thinking config %s: %s", model, tc, e)
+                    NO_THINKING_CFG.add(model)
+                    r = None
+                except (ModelBusy, requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                    last, r = e, None
+                    app.logger.info("gemini model %s unavailable: %s", model, e)
+                    break
+            if r is None:
                 continue
-            for ev in sse_json(r):
-                for c in ev.get("candidates") or []:
-                    for pt in c.get("content", {}).get("parts", []):
-                        if pt.get("text") and not pt.get("thought"):
-                            yield pt["text"]
+            try:
+                for ev in sse_json(r):
+                    for c in ev.get("candidates") or []:
+                        for pt in c.get("content", {}).get("parts", []):
+                            if pt.get("text") and not pt.get("thought"):
+                                if not started:
+                                    started = True
+                                    app.logger.info("gemini %s first words after %.1fs (thinking=%s)",
+                                                    model, time.time() - t0, thinking_config(model, fast))
+                                yield pt["text"]
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                if started:
+                    raise RuntimeError(f"the connection to Gemini dropped mid-answer ({e})")
+                last = ModelBusy(f"{model} sent nothing for {first_wait(fast)} s")
+                app.logger.info("gemini model %s silent for %ss, moving on", model, first_wait(fast))
+                continue
+            app.logger.info("gemini %s finished in %.1fs", model, time.time() - t0)
             return
         raise ModelBusy(f"All free Gemini models are busy right now ({last}).")
 
@@ -495,8 +551,10 @@ def video_events(query, video, out_lang, alternatives, redo=False):
     else:
         yield ev("stage", pct=30, step="transcript", msg="Reading the video's captions…")
         try:
+            t_cap = time.time()
             segs, lang = captions_transcript(video)
             blocks = transcript_blocks(segs)
+            app.logger.info("captions for %s in %.1fs (%d chars)", video["id"], time.time() - t_cap, sum(map(len, blocks)))
         except BadTranscript as e:
             yield ev("stage", pct=32, step="transcript", msg=f"{e}, so they won't be used. Getting a proper transcript…")
         except Exception as e:
@@ -573,7 +631,9 @@ def search_events(query, out_lang):
                 return
             yield ev("stage", pct=15, step="pick",
                      msg=f"Found {len(found)} videos. Picking the best one for studying…")
+            t_rank = time.time()
             candidates = rerank(query, found)
+            app.logger.info("ranking took %.1fs", time.time() - t_rank)
             cache_put(skey, candidates)
 
         for v in candidates[:4]:
@@ -1101,7 +1161,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "5.0"
+APP_VERSION = "5.1"
 
 
 def settings_state():
@@ -1112,7 +1172,7 @@ def settings_state():
     if not provider_has_key(p):
         missing.append({"gemini": "Gemini key (or a YouTube key that also allows Gemini)",
                         "groq": "Groq key", "anthropic": "Anthropic key"}.get(p, p))
-    return dict(provider=p, ollama_model=cfg("OLLAMA_MODEL", "llama3.1"),
+    return dict(provider=p, ollama_model=cfg("OLLAMA_MODEL", "llama3.1"), speed=cfg("AI_SPEED", "fast").lower(),
                 has={f: bool(cfg(env)) for f, env in KEY_FIELDS.items()},
                 missing=missing, ready=not missing, version=APP_VERSION,
                 env_file=str(ENV_FILE))
@@ -1138,6 +1198,8 @@ def post_settings():
         upd["LLM_PROVIDER"] = b["provider"]
     if (b.get("ollama_model") or "").strip():
         upd["OLLAMA_MODEL"] = b["ollama_model"].strip()
+    if b.get("speed") in ("fast", "balanced", "thorough"):
+        upd["AI_SPEED"] = b["speed"]
     if upd:
         try:
             save_env(upd)

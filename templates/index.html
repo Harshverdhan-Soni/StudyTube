@@ -377,6 +377,12 @@
     <input type="password" id="s_ak" placeholder="sk-ant-…" autocomplete="off"></div>
   <div data-for="ollama"><label>Ollama model</label>
     <input type="text" id="s_om" placeholder="llama3.1"></div>
+  <label for="s_speed">AI speed</label>
+  <select id="s_speed" style="width:100%">
+    <option value="fast">Fast: answers start in seconds (recommended)</option>
+    <option value="balanced">Balanced: a little more reasoning</option>
+    <option value="thorough">Thorough: deepest reasoning, can take a minute or more</option>
+  </select>
   <label>Groq API key <small data-ok="groq_key"></small></label>
   <input type="password" id="s_qk" placeholder="gsk_… (optional unless Groq is chosen above)" autocomplete="off">
   <small>Free at console.groq.com/keys. Also used to transcribe videos that have no captions (Whisper).</small>
@@ -1177,6 +1183,7 @@ function openSetup(){
   document.querySelectorAll("[data-ok]").forEach(el => el.textContent = settings?.has?.[el.dataset.ok] ? "✓ saved" : "");
   document.querySelector(`input[name=prov][value=${settings?.provider || "gemini"}]`).checked = true;
   $("#s_om").value = settings?.ollama_model || "";
+  $("#s_speed").value = settings?.speed || "fast";
   syncProv(); $("#setup").classList.remove("hidden");
 }
 function sMsg(text, kind){
@@ -1201,7 +1208,8 @@ $("#sf").onsubmit = async e => {
     const r = await fetch("/api/settings", {method:"POST", headers:{"Content-Type":"application/json"},
       body: JSON.stringify({youtube_key:$("#s_yt").value, gemini_key:$("#s_gk").value,
         groq_key:$("#s_qk").value, anthropic_key:$("#s_ak").value,
-        provider:document.querySelector("input[name=prov]:checked").value, ollama_model:$("#s_om").value})});
+        provider:document.querySelector("input[name=prov]:checked").value, ollama_model:$("#s_om").value,
+        speed:$("#s_speed").value})});
     const s = await r.json();
     if (!r.ok) throw new Error(s.error || ("HTTP " + r.status));
     settings = s;
