@@ -1,0 +1,20 @@
+# --- secrets: NEVER commit (your API keys live here) ---
+.env
+
+# --- personal data / local state ---
+cache/
+studytube.log
+.browser-profile/
+
+# --- Python ---
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# --- OS / editor ---
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
