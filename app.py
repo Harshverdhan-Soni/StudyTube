@@ -1023,7 +1023,9 @@ def history_items(limit=200):
         if not isinstance(d, dict) or "summary_md" not in d:
             continue  # search-result caches, not notes
         if d.get("kind") == "explain":
-            items.append({"key": f.stem, "kind": "explain", "query": d.get("term", ""),
+            m = re.search(r"##\s*Definition\s*\n+(.*?)(?=\n##|\Z)", d.get("summary_md", ""), re.S)
+            snippet = re.sub(r"[*_`#]", "", re.sub(r"\s+", " ", m.group(1) if m else d.get("summary_md", ""))).strip()
+            items.append({"key": f.stem, "kind": "explain", "query": d.get("term", ""), "snippet": snippet[:220],
                           "title": d.get("term", ""), "channel": "", "duration": "Explanation",
                           "thumb": "/static/icon-192.png", "video_id": "", "lang": d.get("lang", "English"),
                           "saved_at": d.get("saved_at") or f.stat().st_mtime})
@@ -1161,7 +1163,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "5.1"
+APP_VERSION = "5.2"
 
 
 def settings_state():
