@@ -13,7 +13,9 @@ import json
 import os
 import re
 import tempfile
+import threading
 import time
+import uuid
 from pathlib import Path
 
 import requests
@@ -542,7 +544,7 @@ def video_events(query, video, out_lang, alternatives, redo=False):
     if cached:
         yield ev("stage", pct=100, step="notes", msg="Loaded from your saved notes")
         yield ev("transcript", blocks=cached["transcript"], lang=cached["transcript_lang"])
-        yield ev("done", result=cached)
+        yield ev("done", result={**cached, "key": key})
         return True
 
     blocks, lang, youtube_url = None, None, None
@@ -1037,6 +1039,10 @@ def history_items(limit=200):
                       "video_id": v.get("id", ""), "lang": d.get("lang", "English"),
                       "saved_at": d.get("saved_at") or f.stat().st_mtime})
     items.sort(key=lambda x: x["saved_at"], reverse=True)
+    lib = lib_load()
+    known = {b["id"] for b in lib["books"]}
+    for it in items:
+        it["books"] = [b for b in lib["items"].get(it["key"], []) if b in known]
     return items[:limit]
 
 
@@ -1090,6 +1096,131 @@ def api_history_delete(key):
     f = CACHE_DIR / f"{key}.json"
     if f.exists():
         f.unlink()
+    with LIB_LOCK:
+        lib = lib_load()
+        if lib["items"].pop(key, None) is not None:
+            lib_save(lib)
+    return jsonify(ok=True)
+
+
+# ---------------------------------------------------------------- books (organise the library)
+LIB_FILE = BASE_DIR / "library.json"      # personal data, kept out of git
+LIB_LOCK = threading.Lock()
+
+
+def lib_load():
+    try:
+        d = json.loads(LIB_FILE.read_text(encoding="utf-8"))
+        return {"books": list(d.get("books") or []), "items": dict(d.get("items") or {})}
+    except Exception:
+        return {"books": [], "items": {}}
+
+
+def lib_save(lib):
+    tmp = LIB_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(lib, ensure_ascii=False, indent=1), encoding="utf-8")
+    tmp.replace(LIB_FILE)
+
+
+def library_add(key, book):
+    """Put a saved note / explanation into a book (it may sit in more than one)."""
+    if not key or not KEY_RE.match(key) or not book:
+        return
+    with LIB_LOCK:
+        lib = lib_load()
+        if not any(b["id"] == book for b in lib["books"]):
+            return
+        cur = lib["items"].setdefault(key, [])
+        if book not in cur:
+            cur.append(book)
+            lib_save(lib)
+
+
+def with_book(gen, book):
+    """Pass a result stream through; when it finishes, file the result in the open book."""
+    for line in gen:
+        if book and line.startswith('{"type": "done"'):
+            try:
+                library_add(json.loads(line)["result"].get("key"), book)
+            except Exception:
+                app.logger.exception("could not file result in book")
+        yield line
+
+
+def clean_title(t):
+    return re.sub(r"\s+", " ", str(t or "")).strip()[:60]
+
+
+@app.get("/api/books")
+def api_books():
+    return jsonify(lib_load()["books"])
+
+
+@app.post("/api/books")
+def api_book_create():
+    b = request.get_json(force=True)
+    title = clean_title(b.get("title"))
+    if not title:
+        return jsonify(error="Give the book a title."), 400
+    with LIB_LOCK:
+        lib = lib_load()
+        if any(x["title"].lower() == title.lower() for x in lib["books"]):
+            return jsonify(error="You already have a book with that title."), 400
+        book = {"id": uuid.uuid4().hex[:10], "title": title, "created": time.time()}
+        lib["books"].append(book)
+        if b.get("adopt_unsorted"):
+            known = {x["id"] for x in lib["books"]}
+            for f in CACHE_DIR.glob("*.json"):
+                if KEY_RE.match(f.stem) and not [x for x in lib["items"].get(f.stem, []) if x in known and x != book["id"]]:
+                    lib["items"][f.stem] = [book["id"]]
+        lib_save(lib)
+    return jsonify(book)
+
+
+@app.post("/api/books/move")
+def api_book_move():
+    b = request.get_json(force=True)
+    keys = [k for k in (b.get("keys") or []) if isinstance(k, str) and KEY_RE.match(k)]
+    target = b.get("book") or ""
+    with LIB_LOCK:
+        lib = lib_load()
+        if target and not any(x["id"] == target for x in lib["books"]):
+            return jsonify(error="That book no longer exists."), 404
+        for k in keys:
+            if target:
+                lib["items"][k] = [target]
+            else:
+                lib["items"].pop(k, None)
+        lib_save(lib)
+    return jsonify(ok=True, moved=len(keys))
+
+
+@app.post("/api/books/<bid>")
+def api_book_rename(bid):
+    title = clean_title(request.get_json(force=True).get("title"))
+    if not title:
+        return jsonify(error="Give the book a title."), 400
+    with LIB_LOCK:
+        lib = lib_load()
+        if any(x["title"].lower() == title.lower() and x["id"] != bid for x in lib["books"]):
+            return jsonify(error="You already have a book with that title."), 400
+        for x in lib["books"]:
+            if x["id"] == bid:
+                x["title"] = title
+                lib_save(lib)
+                return jsonify(x)
+    return jsonify(error="That book no longer exists."), 404
+
+
+@app.delete("/api/books/<bid>")
+def api_book_delete(bid):
+    """Remove the book only; its notes and explanations go back to Unsorted."""
+    with LIB_LOCK:
+        lib = lib_load()
+        lib["books"] = [x for x in lib["books"] if x["id"] != bid]
+        lib["items"] = {k: [x for x in v if x != bid] for k, v in lib["items"].items()}
+        lib["items"] = {k: v for k, v in lib["items"].items() if v}
+        lib_save(lib)
     return jsonify(ok=True)
 
 
@@ -1123,7 +1254,7 @@ def api_search():
     query = (body.get("query") or "").strip()
     if not query:
         return jsonify(error="Type something to search."), 400
-    return stream(search_events(query, body.get("lang") or "English"))
+    return stream(with_book(search_events(query, body.get("lang") or "English"), body.get("book") or ""))
 
 
 @app.post("/api/explain")
@@ -1132,16 +1263,16 @@ def api_explain():
     term = re.sub(r"\s+", " ", (b.get("term") or "")).strip()[:120]
     if not term:
         return jsonify(error="Type a term to explain."), 400
-    return stream(explain_events(term, b.get("lang") or "English", b.get("context") or ""))
+    return stream(with_book(explain_events(term, b.get("lang") or "English", b.get("context") or ""), b.get("book") or ""))
 
 
 @app.post("/api/video")
 def api_video():
     """Summarise a specific alternative the user clicked."""
     body = request.get_json(force=True)
-    return stream(single_video_events(body.get("query", ""), body["video"],
-                                      body.get("lang") or "English", body.get("alternatives") or [],
-                                      bool(body.get("redo"))))
+    return stream(with_book(single_video_events(body.get("query", ""), body["video"],
+                                                body.get("lang") or "English", body.get("alternatives") or [],
+                                                bool(body.get("redo"))), body.get("book") or ""))
 
 
 # ---------------------------------------------------------------- settings
@@ -1163,7 +1294,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "5.2"
+APP_VERSION = "5.3"
 
 
 def settings_state():

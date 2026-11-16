@@ -290,13 +290,50 @@
   .xcard .s{font-size:12.5px;color:var(--muted);line-height:1.4;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;height:35px}
   .xcard .m{font-size:11.5px;color:var(--muted);margin-top:5px}
   .lib-empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:44px 16px;border:1px dashed var(--line);border-radius:12px;font-size:14px}
+  /* ---- books ---- */
+  #bookChip{display:inline-flex;align-items:center;gap:7px;max-width:260px}
+  #bookChip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #bookChip.in{border-color:var(--line);color:var(--ink);background:var(--card)}
+  .shelf-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 12px}
+  .shelf-head h2{margin:0;font-size:18px}
+  .shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px}
+  .book{position:relative;display:flex;flex-direction:column;justify-content:space-between;text-align:left;height:170px;padding:16px 16px 14px 26px;
+    border:1px solid var(--line);border-radius:6px 12px 12px 6px;background:var(--card);color:var(--ink);overflow:hidden;transition:transform .12s,border-color .12s}
+  .book::before{content:"";position:absolute;left:0;top:0;bottom:0;width:12px;background:var(--bc,#F7931E)}
+  .book:hover{transform:translateY(-3px);border-color:var(--bc,var(--accent))}
+  .book .bt{font-size:17px;font-weight:800;line-height:1.25;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .book .bm{font-size:12.5px;color:var(--muted);line-height:1.5}
+  .book.new{align-items:center;justify-content:center;gap:8px;border-style:dashed;color:var(--accent);font-weight:700;padding:16px}
+  .book.new::before{display:none}
+  .book.loose{--bc:#8b887f}
+  .bookbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 0}
+  .bookbar h2{margin:0;font-size:19px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bookbar button{font-size:12.5px;padding:6px 10px}
+  .bookbar .dot{width:12px;height:22px;border-radius:3px;background:var(--bc,#F7931E);flex:none}
+  .mv{position:absolute;top:6px;right:34px;border:0;background:var(--card);color:var(--muted);width:24px;height:24px;padding:0;border-radius:6px;
+    display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s}
+  .rcard:hover .mv,.xcard:hover .mv{opacity:1}
+  .mv:hover{color:var(--accent)}
+  .xcard{padding-right:62px}
+  #bookDlg{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center}
+  #bookDlg .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;width:min(440px,92vw);max-height:86vh;overflow:auto}
+  #bookDlg h3{margin:0 0 6px;font-size:18px}
+  #bookDlg p{margin:0 0 12px;color:var(--muted);font-size:13.5px;line-height:1.5}
+  #bookDlg input[type=text]{width:100%;min-width:0;padding:10px 12px;font-size:15px}
+  #bookDlg .chk{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;margin-top:12px;color:var(--ink)}
+  #bookDlg .act{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+  #bookDlg .err{color:#dc2626;font-size:13px;min-height:18px;margin-top:8px}
+  #bookDlg .pick{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+  #bookDlg .pick button{text-align:left;display:flex;align-items:center;gap:10px;padding:9px 12px}
+  #bookDlg .pick .dot{width:8px;height:18px;border-radius:2px;background:var(--bc,#8b887f);flex:none}
+  #bookDlg .danger{background:#dc2626;border-color:#dc2626;color:#fff}
   .badge{font-size:11px;background:var(--line);border-radius:999px;padding:1px 7px;margin-left:4px;font-weight:600}
 </style>
 </head>
 <body>
 <header>
   <h1><div class="home brand" id="homeLink" title="Home"><img class="logo" src="/static/icon-192.png" alt=""><span class="wm">Study<span>Tube</span></span></div>
-    <div class="hbtns"><button class="hbtn" id="recentBtn" title="Previously searched">🕘 Recent</button>
+    <div class="hbtns"><button class="hbtn" id="bookChip" type="button"></button><button class="hbtn" id="recentBtn" title="Previously searched">🕘 Recent</button>
     <button class="hbtn" id="themeBtn" type="button" aria-label="Theme"></button>
     <button class="gear" id="gear" title="Settings">⚙</button></div></h1>
   <div id="recentPanel" class="hidden">
@@ -355,6 +392,7 @@
 </main>
 <div id="empty"><div id="home">
   <div class="welcome"><img src="/static/icon-192.png" alt=""><div><div class="tagline">Study, not scroll.</div><div>Type a topic. You'll get the single best video to watch, and notes you can read instead. No feed, no Shorts, no autoplay.</div></div></div>
+  <div id="homeShelf"></div>
   <div id="homeRecent"></div>
 </div></div>
 
@@ -375,6 +413,7 @@
 </aside>
 <button type="button" id="selExplain" class="primary hidden"></button>
 <div id="rmFull" class="hidden"></div>
+<div id="bookDlg" class="hidden"><div class="box" role="dialog" aria-modal="true"></div></div>
 <div id="rmCard" class="hidden"><div class="box" role="dialog" aria-modal="true" aria-labelledby="rmCardTitle"></div></div>
 <div id="setup" class="hidden"><form class="box" id="sf">
   <h2>Settings</h2>
@@ -782,13 +821,13 @@ function redoTranscript(){
   $("#pmsg").textContent = "Re-transcribing this video…";
   document.querySelector('.tab[data-p="sum"]').click();
   streamRun("/api/video", {video: current.video, alternatives: current.alts || [], query: lastQuery,
-                           lang: $("#lang").value, redo: true});
+                           lang: $("#lang").value, redo: true, book: bookParam()});
 }
 
 function pickAlt(video, list){
   const alts = [current.video, ...list.filter(x => x.id !== video.id)].slice(0, 5);
   progStart("transcript");
-  streamRun("/api/video", {video, alternatives: alts, query: lastQuery, lang: $("#lang").value});
+  streamRun("/api/video", {video, alternatives: alts, query: lastQuery, lang: $("#lang").value, book: bookParam()});
 }
 
 // ---- recent (saved notes, served from the local cache)
@@ -802,12 +841,112 @@ async function loadHistory(){
   try { history = await (await fetch("/api/history")).json(); } catch { history = []; }
   renderHomeRecent(); renderRecentList();
 }
+// ---- books: a shelf of titled books; each holds its own video notes and explanations
+let books = [];
+const BOOK_COLORS = ["#F7931E", "#5B8DEF", "#34A37A", "#D95F8C", "#9B7BE0", "#D9A441", "#3FB1C4", "#E06B4F"];
+const BOOK_SVG = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"></path><path d="M4 21a2 2 0 0 0 2 2h13v-4"></path></svg>`;
+const MOVE_SVG = `<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M10 13h5M13 10.5l2.5 2.5-2.5 2.5"></path></svg>`;
+const bookColor = id => { const i = books.findIndex(b => b.id === id); return BOOK_COLORS[(i < 0 ? 0 : i) % BOOK_COLORS.length]; };
+const bookOf = id => books.find(b => b.id === id);
+const inBook = (h, id) => id === "" ? !(h.books || []).length : (h.books || []).includes(id);
+const bookParam = () => lib.book || "";
+async function loadBooks(){ try { books = await (await fetch("/api/books")).json(); } catch { books = []; } if (lib.book && !bookOf(lib.book)) lib.book = null; }
+function updateBookChip(){
+  const b = lib.book ? bookOf(lib.book) : null, chip = $("#bookChip");
+  chip.innerHTML = BOOK_SVG + `<span>${b ? esc(b.title) : lib.book === "" ? "Unsorted" : "Books"}</span>`;
+  chip.classList.toggle("in", !!b);
+  chip.title = b ? `Open book: ${b.title}. New searches are saved here.` : "No book open. New searches go to Unsorted. Click to choose a book.";
+}
+function openBook(id){ lib.book = id; lib.q = ""; lib.page.video = lib.page.explain = 0; if ($("#libSearch")) $("#libSearch").value = ""; renderHomeRecent(); }
+function renderShelf(){
+  const loose = history.filter(h => inBook(h, ""));
+  const stat = id => { const it = history.filter(h => inBook(h, id)); const v = it.filter(h => h.kind !== "explain").length, x = it.length - v;
+    return {v, x, last: it.length ? Math.max(...it.map(h => h.saved_at)) : 0}; };
+  const list = books.map(b => ({...b, ...stat(b.id)})).sort((a, b) => (b.last || b.created) - (a.last || a.created));
+  const counts = s => `${s.v} video note${s.v === 1 ? "" : "s"} · ${s.x} explanation${s.x === 1 ? "" : "s"}`;
+  $("#homeShelf").innerHTML = `<div class="shelf-head"><h2>Your books</h2>
+      <span style="font-size:13px;color:var(--muted)">${books.length ? "Open a book, then search. Everything you find is kept inside it." : "Create a book for each subject to keep your notes organised."}</span></div>
+    <div class="shelf">
+      <button type="button" class="book new" data-book-new="1"><span style="font-size:30px;line-height:1">+</span>New book</button>
+      ${list.map(b => `<button type="button" class="book" data-book="${b.id}" style="--bc:${bookColor(b.id)}" title="Open ${esc(b.title)}">
+        <span class="bt">${esc(b.title)}</span><span class="bm">${counts(b)}<br>${b.last ? "Last used " + ago(b.last) : "Empty"}</span></button>`).join("")}
+      ${loose.length ? `<button type="button" class="book loose" data-book="" title="Items not in any book">
+        <span class="bt">Unsorted</span><span class="bm">${counts(stat(""))}<br>Not in any book yet</span></button>` : ""}
+    </div>`;
+}
+// one small dialog for: new book, rename, delete, move
+function bookDlg(html, onReady){ $("#bookDlg .box").innerHTML = html; $("#bookDlg").classList.remove("hidden"); if (onReady) onReady(); }
+function closeBookDlg(){ $("#bookDlg").classList.add("hidden"); }
+async function api(url, method, body){
+  const r = await fetch(url, {method, headers: {"Content-Type": "application/json"}, body: body ? JSON.stringify(body) : undefined});
+  const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.error || "HTTP " + r.status); return d;
+}
+async function refreshLibrary(){ await loadBooks(); await loadHistory(); }
+function dlgNewBook(thenMoveKeys){
+  const loose = history.filter(h => inBook(h, "")).length;
+  bookDlg(`<form id="bkForm"><h3 id="bkTitle">New book</h3><p>Give it the name of a subject or a textbook, for example “Discrete Mathematics”.</p>
+    <input type="text" id="bkName" maxlength="60" placeholder="Book title" autocomplete="off" aria-labelledby="bkTitle">
+    ${!thenMoveKeys && loose ? `<label class="chk"><input type="checkbox" id="bkAdopt" ${books.length ? "" : "checked"}> Move my ${loose} unsorted item${loose === 1 ? "" : "s"} into this book</label>` : ""}
+    <div class="err" id="bkErr"></div>
+    <div class="act"><button type="button" data-bk="cancel">Cancel</button><button class="primary">Create book</button></div></form>`, () => {
+    $("#bkName").focus();
+    $("#bkForm").onsubmit = async e => { e.preventDefault();
+      try {
+        const b = await api("/api/books", "POST", {title: $("#bkName").value, adopt_unsorted: !!($("#bkAdopt") && $("#bkAdopt").checked)});
+        if (thenMoveKeys) await api("/api/books/move", "POST", {keys: thenMoveKeys, book: b.id});
+        closeBookDlg(); await refreshLibrary(); openBook(b.id);
+      } catch (err) { $("#bkErr").textContent = err.message; } };
+  });
+}
+function dlgRename(b){
+  bookDlg(`<form id="bkForm"><h3 id="bkTitle">Rename book</h3><input type="text" id="bkName" maxlength="60" autocomplete="off" aria-labelledby="bkTitle">
+    <div class="err" id="bkErr"></div><div class="act"><button type="button" data-bk="cancel">Cancel</button><button class="primary">Save</button></div></form>`, () => {
+    $("#bkName").value = b.title; $("#bkName").focus(); $("#bkName").select();
+    $("#bkForm").onsubmit = async e => { e.preventDefault();
+      try { await api("/api/books/" + b.id, "POST", {title: $("#bkName").value}); closeBookDlg(); await refreshLibrary(); }
+      catch (err) { $("#bkErr").textContent = err.message; } };
+  });
+}
+function dlgDelete(b){
+  const n = history.filter(h => inBook(h, b.id)).length;
+  bookDlg(`<h3>Delete “${esc(b.title)}”?</h3><p>Only the book is removed. Its ${n} item${n === 1 ? "" : "s"} will not be deleted; anything that is in no other book moves to Unsorted.</p>
+    <div class="err" id="bkErr"></div><div class="act"><button type="button" data-bk="cancel">Cancel</button><button type="button" class="danger" id="bkDel">Delete book</button></div>`, () => {
+    $("#bkDel").onclick = async () => { try { await api("/api/books/" + b.id, "DELETE"); closeBookDlg(); lib.book = null; await refreshLibrary(); }
+      catch (err) { $("#bkErr").textContent = err.message; } };
+  });
+}
+function dlgMove(keys, what){
+  bookDlg(`<h3>Move ${esc(what)} to…</h3><div class="pick">
+      ${books.filter(b => b.id !== lib.book).map(b => `<button type="button" data-to="${b.id}" style="--bc:${bookColor(b.id)}"><span class="dot"></span>${esc(b.title)}</button>`).join("")}
+      ${lib.book !== "" ? `<button type="button" data-to=""><span class="dot"></span>Unsorted (no book)</button>` : ""}
+      <button type="button" data-to="+new" style="color:var(--accent);font-weight:700">+ New book…</button></div>
+    <div class="err" id="bkErr"></div><div class="act"><button type="button" data-bk="cancel">Cancel</button></div>`, () => {
+    $("#bookDlg .pick").onclick = async e => { const t = e.target.closest("[data-to]"); if (!t) return;
+      if (t.dataset.to === "+new") { dlgNewBook(keys); return; }
+      try { await api("/api/books/move", "POST", {keys, book: t.dataset.to}); closeBookDlg(); await refreshLibrary(); }
+      catch (err) { $("#bkErr").textContent = err.message; } };
+  });
+}
+$("#bookDlg").addEventListener("click", e => { if (e.target.id === "bookDlg" || e.target.closest('[data-bk="cancel"]')) closeBookDlg(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#bookDlg").classList.contains("hidden")) closeBookDlg(); });
+$("#homeShelf").addEventListener("click", e => {
+  if (e.target.closest("[data-book-new]")) { dlgNewBook(); return; }
+  const b = e.target.closest("[data-book]"); if (b) openBook(b.dataset.book);
+});
+$("#bookChip").onclick = () => { if (run) return; if (!$("#main").classList.contains("hidden")) goHome(); else { lib.book = null; renderHomeRecent(); } };
+function renderBookBar(){
+  const b = lib.book ? bookOf(lib.book) : null, n = history.filter(h => inBook(h, lib.book)).length;
+  $("#bookBar").style.setProperty("--bc", b ? bookColor(b.id) : "#8b887f");
+  $("#bookBar").innerHTML = `<button type="button" data-bb="back">‹ Books</button><span class="dot"></span><h2>${b ? esc(b.title) : "Unsorted"}</h2>
+    ${b ? `<button type="button" data-bb="rename">Rename</button><button type="button" data-bb="delete">Delete book</button>`
+        : n ? `<button type="button" class="primary" data-bb="moveall">Move all ${n} to a book…</button>` : ""}`;
+}
 // ---- home library: Video notes | Explanations, with search and pages that fit the window
-const lib = {tab: "video", q: "", page: {video: 0, explain: 0}, built: false};
+const lib = {tab: "video", q: "", page: {video: 0, explain: 0}, built: false, book: null};   // book: null = shelf, "" = Unsorted, else a book id
 try { if (localStorage.getItem("st-libtab") === "explain") lib.tab = "explain"; } catch {}
 const IMG_FALLBACK = `onerror="this.onerror=null;this.src='/static/icon-192.png';this.style.objectFit='contain';this.style.padding='10px'"`;
 function libBuild(){
-  $("#homeRecent").innerHTML = `<div class="lib-head">
+  $("#homeRecent").innerHTML = `<div class="bookbar" id="bookBar"></div><div class="lib-head">
       <div class="lib-tabs" role="tablist">
         <button type="button" role="tab" data-lib="video">Video notes <span class="badge" id="libNv">0</span></button>
         <button type="button" role="tab" data-lib="explain">Explanations <span class="badge" id="libNx">0</span></button>
@@ -822,12 +961,25 @@ function libBuild(){
   $("#libSearch").oninput = e => { lib.q = e.target.value; lib.page.video = lib.page.explain = 0; renderHomeRecent(); };
   $("#libPrev").onclick = () => { lib.page[lib.tab]--; renderHomeRecent(); };
   $("#libNext").onclick = () => { lib.page[lib.tab]++; renderHomeRecent(); };
+  $("#bookBar").onclick = e => { const a = e.target.closest("[data-bb]"); if (!a) return;
+    const b = bookOf(lib.book), act = a.dataset.bb;
+    if (act === "back") { lib.book = null; renderHomeRecent(); }
+    else if (act === "rename" && b) dlgRename(b);
+    else if (act === "delete" && b) dlgDelete(b);
+    else if (act === "moveall") { const keys = history.filter(h => inBook(h, "")).map(h => h.key); dlgMove(keys, `all ${keys.length} unsorted items`); }
+  };
   lib.built = true;
 }
 function libSnippet(t){ const math = []; return unstashMath(esc(stashMath(t || "", math, false)), math); }
 function renderHomeRecent(){
   if (!lib.built) libBuild();
-  const vids = history.filter(h => h.kind !== "explain"), exps = history.filter(h => h.kind === "explain");
+  updateBookChip();
+  const shelf = lib.book === null;
+  $("#homeShelf").classList.toggle("hidden", !shelf); $("#homeRecent").classList.toggle("hidden", shelf);
+  if (shelf) { renderShelf(); return; }
+  renderBookBar();
+  const mine = history.filter(h => inBook(h, lib.book));
+  const vids = mine.filter(h => h.kind !== "explain"), exps = mine.filter(h => h.kind === "explain");
   $("#libNv").textContent = vids.length; $("#libNx").textContent = exps.length;
   $("#homeRecent").querySelectorAll("[data-lib]").forEach(b => { b.classList.toggle("on", b.dataset.lib === lib.tab); b.setAttribute("aria-selected", b.dataset.lib === lib.tab); });
   const isV = lib.tab === "video", all = isV ? vids : exps, f = lib.q.trim().toLowerCase();
@@ -848,16 +1000,19 @@ function renderHomeRecent(){
   $(".lib-pager").style.visibility = pages > 1 ? "visible" : "hidden";
   if (!slice.length) {
     grid.innerHTML = `<div class="lib-empty">${f ? `Nothing matches “${esc(lib.q.trim())}”.`
-      : isV ? "No video notes yet. Type a topic above and press Find &amp; summarise."
-            : "No explanations yet. Switch to “Explain a term” above, or select a word in any notes."}</div>`;
+      : lib.book === "" ? "Nothing unsorted here."
+      : isV ? "No video notes in this book yet. Type a topic above and press Find &amp; summarise: it will be saved here."
+            : "No explanations in this book yet. Switch to “Explain a term” above, or select a word in any notes."}</div>`;
     return;
   }
   grid.innerHTML = isV ? slice.map(h => `<div class="rcard" data-k="${h.key}" title="${esc(h.title)}">
       <img class="th" src="${thumbOf(h)}" alt="" loading="lazy" ${IMG_FALLBACK}>
+      <button class="mv" data-mv="${h.key}" title="Move to another book" aria-label="Move to another book">${MOVE_SVG}</button>
       <button class="del" data-del="${h.key}" title="Remove from history">×</button>
       <div class="b"><div class="t">${esc(h.title)}</div>
       <div class="m"><span class="q">${esc(h.query)}</span>${h.duration} · ${ago(h.saved_at)}</div></div></div>`).join("")
     : slice.map(h => `<div class="xcard" data-k="${h.key}" title="${esc(h.title)}">
+      <button class="mv" data-mv="${h.key}" title="Move to another book" aria-label="Move to another book">${MOVE_SVG}</button>
       <button class="del" data-del="${h.key}" title="Remove from history">×</button>
       <div class="t">${esc(h.title)}</div><div class="s">${libSnippet(h.snippet)}</div>
       <div class="m">${ago(h.saved_at)}${h.lang && h.lang !== "English" ? " · " + esc(h.lang) : ""}</div></div>`).join("");
@@ -870,7 +1025,7 @@ function renderRecentList(){
   $("#rlist").innerHTML = list.length ? list.map(h => `<div class="ritem" data-k="${h.key}">
       <img class="${h.kind === "explain" ? "exth" : ""}" src="${thumbOf(h)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='/static/icon-192.png';this.style.objectFit='contain';this.style.padding='10px'">
       <div style="min-width:0;padding-right:24px"><div class="t">${esc(h.title)}</div>
-      <div class="m"><span class="q">${h.kind === "explain" ? "Explained" : esc(h.query)}</span>${ago(h.saved_at)}${h.lang && h.lang !== "English" ? " · " + esc(h.lang) : ""}</div></div>
+      <div class="m"><span class="q">${h.kind === "explain" ? "Explained" : esc(h.query)}</span>${ago(h.saved_at)}${(h.books || []).map(id => bookOf(id)).filter(Boolean).map(b => " · in " + esc(b.title)).join("")}${h.lang && h.lang !== "English" ? " · " + esc(h.lang) : ""}</div></div>
       <button class="del" data-del="${h.key}" title="Remove from history">×</button></div>`).join("")
     : `<div style="padding:14px;color:var(--muted);font-size:13px">${history.length ? "No match." : "Nothing yet. Your searches will appear here."}</div>`;
 }
@@ -887,6 +1042,8 @@ document.addEventListener("click", async e => {
     history = history.filter(h => h.key !== del.dataset.del);
     renderHomeRecent(); renderRecentList(); return;
   }
+  const mv = e.target.closest("[data-mv]");
+  if (mv) { e.stopPropagation(); const h = history.find(x => x.key === mv.dataset.mv); dlgMove([mv.dataset.mv], `“${h ? h.title : "this item"}”`); return; }
   const item = e.target.closest("[data-k]");
   if (item) { closeRecent(); openSaved(item.dataset.k); return; }
   if (!e.target.closest("#recentPanel")) closeRecent();
@@ -914,7 +1071,7 @@ function goHome(){
   setStatus(""); loadHistory();
 }
 $("#homeLink").onclick = goHome;
-loadHistory();
+loadBooks().then(loadHistory);
 
 // ---- learning roadmap (inspired by roadmap.sh) ----------------------------------------
 const RM_STATUS = {done: "Done", doing: "In progress", skip: "Skipped"};
@@ -1171,7 +1328,7 @@ async function openExplain(term, context, fromBack){
   $("#exStatus").textContent = "Starting…";
   let md = "", timer = null;
   try {
-    await readEvents("/api/explain", {term, context: context || "", lang: $("#lang").value}, e => {
+    await readEvents("/api/explain", {term, context: context || "", lang: $("#lang").value, book: bookParam()}, e => {
       if (exRun !== ctrl) return;
       if (e.type === "stage") $("#exStatus").textContent = e.msg;
       else if (e.type === "notes") { md += e.delta; if (!timer) timer = setTimeout(() => { timer = null; exPaint(md, false); }, 120); }
@@ -1303,7 +1460,7 @@ $("#f").onsubmit = e => {
   if (searchMode === "explain") { exStack = []; exCur = null; openExplain(query, ""); return; }
   lastQuery = query;
   progStart("search");
-  streamRun("/api/search", {query, lang: $("#lang").value});
+  streamRun("/api/search", {query, lang: $("#lang").value, book: bookParam()});
 };
 </script>
 </body>

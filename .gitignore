@@ -3,6 +3,7 @@
 
 # --- personal data / local state ---
 cache/
+library.json
 studytube.log
 .browser-profile/
 
