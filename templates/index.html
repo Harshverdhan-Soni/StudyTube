@@ -239,8 +239,12 @@
   #rmCard p{margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.55}
   #rmCard .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
   #rmCard .seg button{padding:7px 12px;font-size:13px}
-  #rmCard .seg button.on[data-st="done"]{background:var(--done)}
-  #rmCard .seg button.on[data-st="doing"]{background:var(--doing)}
+  #rmCard .seg button.on[data-st="done"]{background:#16a34a;color:#fff}
+  #rmCard .seg button.on[data-st="doing"]{background:#3b82f6;color:#fff}
+  #rmCard .lbl{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 4px}
+  #rmCard .def{font-size:15px;line-height:1.55;color:var(--ink)}
+  #rmCard .def p{margin:0;color:var(--ink);font-size:15px}
+  #rmCard .box{width:min(500px,92vw)}
   #rmCard .seg button.on[data-st="skip"]{background:#6b6a65}
   .linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
   .linkbtn:hover{color:var(--ink)}
@@ -582,12 +586,6 @@ document.addEventListener("keydown", e => {   // W toggles, when not typing
 });
 try { if (localStorage.getItem("st-wide") === "1") setWide(true); } catch {}
 
-$("#copy").onclick = async () => {
-  if (!current) return;
-  try { await navigator.clipboard.writeText(`# ${current.video.title}\nhttps://youtu.be/${current.video.id}\n\n${current.summary_md}`);
-        $("#copy").textContent = "Copied ✓"; setTimeout(() => $("#copy").textContent = "Copy notes", 1500); }
-  catch { setStatus("Couldn't copy — select the text manually.", true); }
-};
 
 // ---- rendering pieces (each can arrive at a different moment)
 let notesMd = "", renderTimer = null, run = null;
@@ -1202,22 +1200,43 @@ async function rmSetStatus(id, st){
   renderRoadmapPane();
   if (!$("#rmCard").classList.contains("hidden")) rmOpenCard(id);
 }
+let rmCardId = null; const rmDefPending = new Set();
 function rmOpenCard(id){
   const n = rmFind(id); if (!n) return;
+  rmCardId = id;
   const isMile = /^m\d+$/.test(id), st = (current.rmProgress || {})[id] || "";
   const kind = isMile ? "MILESTONE" : (n.type === "optional" ? "OPTIONAL SUB-TOPIC" : "SUB-TOPIC");
   const seg = [["done", "Done"], ["doing", "In progress"], ["skip", "Skip"], ["", "Reset"]].map(([v, l]) =>
     `<button type="button" data-st="${v}" class="${st === v && v ? "on" : ""}">${l}</button>`).join("");
+  const focus = isMile ? n.summary : n.detail;
+  const def = n.explain ? `<div class="def">${renderRich(n.explain)}</div>`
+    : n.explainErr ? `<div class="def" style="color:#dc2626">${esc(n.explainErr)}</div>`
+    : `<div class="def skel" style="padding:2px 0"><i style="width:94%"></i><i style="width:80%"></i></div>`;
   $("#rmCard .box").innerHTML = `<div class="kind">${kind}</div><h3 id="rmCardTitle">${esc(n.title)}</h3>
-    <p>${esc(isMile ? n.summary : n.detail) || "No extra detail in the notes."}</p>
-    <div class="row"><span class="seg rm-seg" data-id="${id}">${seg}</span></div>
+    <div class="lbl">What it is</div>${def}
+    ${focus ? `<div class="lbl">In this video</div><p>${esc(focus)}</p>` : ""}
+    <div class="lbl">Your progress</div>
+    <div class="row" style="margin-top:0"><span class="seg rm-seg" data-id="${id}">${seg}</span></div>
     ${isMile && n.subtopics.length ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">Done or Skip here applies to its ${n.subtopics.length} sub-topics too. Ticking every sub-topic completes the milestone.</div>` : ""}
-    <div class="row">${n.ts ? `<button type="button" class="primary" data-seek="${toSec(n.ts)}">▶ Watch this part (${n.ts})</button>` : ""}
+    <div class="row" style="margin-top:16px">${n.ts ? `<button type="button" class="primary" data-seek="${toSec(n.ts)}">▶ Watch this part (${n.ts})</button>` : ""}
       <button type="button" data-q="${esc(n.title)}">Find a video on this</button>
       <button type="button" data-rm="cardclose" style="margin-left:auto">Close</button></div>`;
   $("#rmCard").classList.remove("hidden");
+  if (!n.explain && !n.explainErr) rmFetchDefinition(id, n);
 }
-function rmCloseCard(){ $("#rmCard").classList.add("hidden"); }
+async function rmFetchDefinition(id, n){
+  const c = current, tag = c.key + ":" + id;
+  if (!c.key || rmDefPending.has(tag)) return;
+  rmDefPending.add(tag);
+  try {
+    const r = await fetch("/api/roadmap/define", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({key: c.key, id})});
+    const d = await r.json(); if (!r.ok) throw new Error(d.error || "HTTP " + r.status);
+    n.explain = d.explain;
+  } catch (err) { n.explainErr = "Couldn't load the definition: " + err.message; setTimeout(() => delete n.explainErr, 15000); }
+  rmDefPending.delete(tag);
+  if (current === c && rmCardId === id && !$("#rmCard").classList.contains("hidden")) rmOpenCard(id);
+}
+function rmCloseCard(){ $("#rmCard").classList.add("hidden"); rmCardId = null; }
 function rmChecklist(){
   const rm = current.roadmap, p = current.rmProgress || {};
   const line = (n, ind) => `${ind}- [${p[n.id] === "done" ? "x" : " "}] ${ind ? "" : "**"}${n.title}${ind ? "" : "**"}${n.ts ? ` (${n.ts})` : ""}${p[n.id] === "skip" ? " (skipped)" : ""}${n.type === "optional" ? " (optional)" : ""}`;
@@ -1363,10 +1382,11 @@ $("#exVideo").onclick = () => {
 $("#exCopy").onclick = async () => {
   if (!exCur || !exCur.md) return;
   const {body, related} = splitRelated(exCur.md);
-  try {
-    await navigator.clipboard.writeText(`# ${exCur.term}\n\n${body.trim()}\n${related.length ? "\nRelated: " + related.join(", ") + "\n" : ""}`);
-    $("#exCopy").textContent = "Copied ✓"; setTimeout(() => $("#exCopy").textContent = "Copy", 1500);
-  } catch { $("#exStatus").textContent = "Couldn't copy. Select the text manually."; }
+  const html = richHTML(body, {title: exCur.term,
+    tail: related.length ? `<p style="color:#5B5853"><b>Related:</b> ${esc(related.join(", "))}</p>` : ""});
+  const plain = `# ${exCur.term}\n\n${body.trim()}\n${related.length ? "\nRelated: " + related.join(", ") + "\n" : ""}`;
+  try { copyDone($("#exCopy"), "Copy", await copyRich(html, plain)); }
+  catch { $("#exStatus").textContent = "Couldn't copy. Select the text manually."; }
 };
 $("#exDrawer").addEventListener("click", e => { const b = e.target.closest("[data-ex]"); if (b) openExplain(b.dataset.ex, exCur ? (exCur.context || exCur.term) : ""); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("#exDrawer").classList.contains("hidden")) closeExplain(); });
@@ -1398,6 +1418,63 @@ document.addEventListener("mouseup", e => {
   }, 0);
 });
 document.addEventListener("scroll", () => selBtn.classList.add("hidden"), true);
+
+// ---- rich copy: formatted HTML for Word / Docs / OneNote, with Markdown as the plain-text fallback
+function mathML(tex, display){
+  try {
+    const out = katex.renderToString(tex, {output: "mathml", displayMode: display, throwOnError: false, strict: "ignore"});
+    const m = out.match(/<math[\s\S]*<\/math>/);
+    if (!m) return esc(tex);
+    return m[0].replace(/<annotation[\s\S]*?<\/annotation>/g, "").replace(/<\/?semantics>/g, "");   // Word wants bare MathML
+  } catch { return esc(tex); }
+}
+function richHTML(md, opts){
+  const math = [];
+  let src = stashMath(md, math, true);
+  if (opts.videoId) src = src.replace(/\[((?:\d{1,2}:)?\d{1,2}:\d{2})\]/g, (_, t) => `[${t}](https://youtu.be/${opts.videoId}?t=${toSec(t)})`);
+  let html = DOMPurify.sanitize(marked.parse(src));
+  html = html.replace(/<p>\s*@@M(\d+)@@\s*<\/p>/g, (all, i) => math[+i].display ? `<p style="text-align:center">@@M${i}@@</p>` : all)
+             .replace(/@@M(\d+)@@/g, (_, i) => window.katex ? mathML(math[+i].tex, math[+i].display) : esc(math[+i].tex));
+  // inline styles, because Word ignores page stylesheets
+  html = html.replace(/<table>/g, '<table border="1" cellspacing="0" cellpadding="6" style="border-collapse:collapse;border:1px solid #999">')
+             .replace(/<th(\s|>)/g, '<th style="border:1px solid #999;background:#F3E7D8;text-align:left"$1')
+             .replace(/<td(\s|>)/g, '<td style="border:1px solid #999;vertical-align:top"$1')
+             .replace(/<h2>/g, '<h2 style="color:#C2410C;font-size:14pt;margin:14pt 0 4pt">')
+             .replace(/<h3>/g, '<h3 style="color:#12263F;font-size:12pt;margin:10pt 0 3pt">');
+  return `<div style="font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1a1a18;line-height:1.45">
+    <h1 style="font-size:18pt;color:#12263F;margin:0 0 4pt">${esc(opts.title)}</h1>
+    ${opts.sub || ""}${html}${opts.tail || ""}</div>`;
+}
+async function copyRich(html, plain){
+  try {
+    await navigator.clipboard.write([new ClipboardItem({
+      "text/html": new Blob([html], {type: "text/html"}), "text/plain": new Blob([plain], {type: "text/plain"})})]);
+    return "rich";
+  } catch {}
+  try {   // older engines: copy a hidden, selected copy of the formatted notes
+    const box = document.createElement("div");
+    box.contentEditable = "true"; box.style.cssText = "position:fixed;left:-9999px;top:0;background:#fff;color:#000"; box.innerHTML = html;
+    document.body.appendChild(box);
+    const r = document.createRange(); r.selectNodeContents(box);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    const ok = document.execCommand("copy"); sel.removeAllRanges(); box.remove();
+    if (ok) return "rich";
+  } catch {}
+  await navigator.clipboard.writeText(plain);
+  return "plain";
+}
+function copyDone(btn, label, how){
+  btn.textContent = how === "rich" ? "Copied with formatting ✓" : "Copied as text ✓";
+  setTimeout(() => btn.textContent = label, 1800);
+}
+$("#copy").onclick = async () => {
+  if (!current || !current.summary_md) return;
+  const v = current.video, url = `https://youtu.be/${v.id}`;
+  const html = richHTML(current.summary_md, {title: v.title, videoId: v.id,
+    sub: `<p style="color:#5B5853;margin:0 0 8pt">${esc(v.channel || "")}${v.duration ? " · " + esc(v.duration) : ""} · <a href="${url}">${url}</a></p>`});
+  try { copyDone($("#copy"), "Copy notes", await copyRich(html, `# ${v.title}\n${url}\n\n${current.summary_md}`)); }
+  catch { setStatus("Couldn't copy. Select the text manually.", true); }
+};
 
 // ---- settings / first run
 let settings = null;

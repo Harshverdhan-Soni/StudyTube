@@ -852,9 +852,12 @@ ROADMAP_SHAPE = """Return exactly this JSON shape:
       "title": "milestone name (max 40 chars)",
       "ts": "timestamp like 3:02 copied from the notes, or empty",
       "summary": "one or two sentences (max 160 chars)",
+      "explain": "a 2-3 sentence definition of this milestone a beginner can follow, with a tiny example if it helps (max 450 chars)",
       "subtopics": [
         {"title": "sub-topic (max 40 chars)", "ts": "timestamp or empty",
-         "detail": "what to understand about it (max 200 chars)", "type": "core or optional"}
+         "detail": "what to understand about it (max 200 chars)",
+         "explain": "a 2-3 sentence definition of this sub-topic a beginner can follow, with a tiny example if it helps (max 450 chars)",
+         "type": "core or optional"}
       ]
     }
   ],
@@ -891,10 +894,11 @@ def parse_roadmap(text):
         for j, sub in enumerate(mm.get("subtopics") or []):
             if isinstance(sub, dict) and sub.get("title"):
                 subs.append({"id": f"m{i + 1}s{j + 1}", "title": _clip(sub["title"], 48), "ts": _ts(sub.get("ts")),
-                             "detail": _clip(sub.get("detail"), 260),
+                             "detail": _clip(sub.get("detail"), 260), "explain": _clip(sub.get("explain"), 700),
                              "type": "optional" if str(sub.get("type", "")).lower().startswith("opt") else "core"})
         ms.append({"id": f"m{i + 1}", "title": _clip(mm["title"], 48), "ts": _ts(mm.get("ts")),
-                   "summary": _clip(mm.get("summary"), 220), "subtopics": subs[:6]})
+                   "summary": _clip(mm.get("summary"), 220), "explain": _clip(mm.get("explain"), 700),
+                   "subtopics": subs[:6]})
     if len(ms) < 2:
         raise ValueError("the roadmap came back too short")
     return {
@@ -993,6 +997,54 @@ def apply_roadmap_status(rm, prog, auto, node, status):
         elif not complete and mst == "done":
             put(mid, "doing" if any(x in ("done", "doing") for x in sts) else "", False)
     return prog, sorted(auto)
+
+
+DEFINE_SYSTEM = """You are a clear tutor. Define ONE topic from a lecture for a student who wants a quick glimpse
+before deciding whether to watch that part. Write 2-3 plain sentences (at most 70 words): what it is, and why it
+matters or a tiny example. Use the lecture notes for the exact meaning. Maths in LaTeX with $...$.
+No heading, no list, no preamble: just the sentences."""
+
+
+@app.post("/api/roadmap/define")
+def api_roadmap_define():
+    """Quick definition for a roadmap node made before definitions were built in. Saved after the first time."""
+    b = request.get_json(force=True)
+    key, node = b.get("key") or "", str(b.get("id") or "")
+    if not KEY_RE.match(key) or not re.match(r"^m\d+(s\d+)?$", node):
+        return jsonify(error="bad request"), 400
+    saved = cache_get(key)
+    rm = (saved or {}).get("roadmap")
+    if not rm:
+        return jsonify(error="These notes are no longer saved."), 404
+    mile = next((m for m in rm["milestones"] if node == m["id"] or node.startswith(m["id"] + "s")), None)
+    target = mile if mile and node == mile["id"] else next((x for x in (mile or {}).get("subtopics", []) if x["id"] == node), None)
+    if not target:
+        return jsonify(error="That topic is not in this roadmap."), 404
+    if target.get("explain"):
+        return jsonify(explain=target["explain"])
+    lang = rm.get("lang") or saved.get("lang") or "English"
+    prompt = (f'Lecture: "{saved.get("video", {}).get("title", "")}"\n'
+              + (f'Section: {mile["title"]}\n' if target is not mile else "")
+              + f'Topic to define: {target["title"]}\n'
+              + f'What the roadmap says about it: {target.get("detail") or target.get("summary") or ""}\n'
+              + f"Write in {lang}.\n\nLECTURE NOTES:\n" + saved.get("summary_md", "")[:12000])
+    try:
+        text = llm(DEFINE_SYSTEM, prompt, max_tokens=400, fast=True)
+    except RateLimited as e:
+        return jsonify(error=str(e)), 429
+    except ModelBusy as e:
+        return jsonify(error=busy_msg(e)), 503
+    except Exception as e:
+        app.logger.exception("define failed")
+        return jsonify(error=f"Couldn't write the definition: {e}"), 500
+    text = re.sub(r"\s+", " ", text).strip()[:900]
+    fresh = cache_get(key) or saved            # progress may have changed meanwhile
+    for m in fresh.get("roadmap", {}).get("milestones", []):
+        for x in [m] + m.get("subtopics", []):
+            if x["id"] == node:
+                x["explain"] = text
+    cache_put(key, fresh)
+    return jsonify(explain=text)
 
 
 @app.post("/api/roadmap/progress")
@@ -1294,7 +1346,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "5.3"
+APP_VERSION = "5.5"
 
 
 def settings_state():
