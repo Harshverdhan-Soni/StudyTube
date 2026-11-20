@@ -120,7 +120,10 @@
   @font-face{font-family:"ekagraHI";src:url("/static/fonts/ekagra-wordmark-hi.woff") format("woff");font-weight:800;font-display:swap}
   .brand .wm.hi{font-family:"ekagraHI","Nirmala UI",sans-serif;font-size:29px;letter-spacing:0;line-height:1.15}
   #uiLangBtn{font-weight:700;min-width:64px}
-  #siteFoot{max-width:1400px;margin:8px auto 0;padding:14px 24px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  /* footer stays at the bottom of the window even when the page is short */
+  body{display:flex;flex-direction:column;min-height:100vh}
+  body > header, body > main, body > #empty{width:100%;margin-left:auto;margin-right:auto;margin-top:0;margin-bottom:0}
+  #siteFoot{width:100%;max-width:1400px;margin:auto auto 0;padding:14px 24px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
     font-size:12.5px;color:var(--muted)}
   #siteFoot b{color:var(--head,var(--ink));font-weight:600}
   .brand .tg{font-size:11px;font-weight:500;color:var(--muted,#8b887f);letter-spacing:0}
