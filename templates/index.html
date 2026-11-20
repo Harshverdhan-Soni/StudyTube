@@ -585,6 +585,25 @@ function loadYTApi(){
   tag.src = "https://www.youtube.com/iframe_api"; tag.dataset.ytapi = "1";
   document.head.appendChild(tag);
 }
+// Resolves once the YouTube API is usable; retries the script if it doesn't arrive in time.
+let ytApi = null;
+function ytApiReady(){
+  if (window.YT && YT.Player) return Promise.resolve();
+  if (ytApi) return ytApi;
+  ytApi = new Promise((resolve, reject) => {
+    let tries = 0;
+    window.onYouTubeIframeAPIReady = () => resolve();
+    const attempt = () => {
+      tries++; loadYTApi();
+      setTimeout(() => {
+        if (window.YT && YT.Player) return resolve();
+        if (tries < 3) attempt(); else { ytApi = null; reject(new Error("YouTube player API did not load")); }
+      }, 6000);
+    };
+    attempt();
+  });
+  return ytApi;
+}
 function makePlayer(videoId, start, autoplay){
   playerReady = false;
   player = new YT.Player("player", {
@@ -594,15 +613,44 @@ function makePlayer(videoId, start, autoplay){
       playerReady = true;
       if (videoId && autoplay) { player.seekTo(start || 0, true); player.playVideo(); }       // was playing: carry on
       else if (videoId) player.cueVideoById({videoId, startSeconds: start || 0});            // was paused: wait at that second
-      else if (pendingId) { currentVideoId = pendingId; player.cueVideoById(pendingId); }
     }}
   });
 }
-loadYTApi();
-window.onYouTubeIframeAPIReady = () => makePlayer(null, 0, false);
+ytApiReady().catch(() => {});   // warm the API up while the user types
+
+// Every video gets a fresh player, built only once its panel is visible, and is checked a few
+// seconds later. If it still hasn't loaded, it is rebuilt automatically (what "Refresh" used to fix).
+let vidToken = 0;
+function videoLooksLoaded(id){
+  if (!playerReady || !player || !player.getVideoData) return false;
+  try { const d = player.getVideoData(); return !!(d && d.video_id === id); } catch { return false; }
+}
+function fallbackIframe(id, start){   // plain embed if the YouTube API can't load at all (timestamps won't jump)
+  $(".player").innerHTML = `<iframe src="https://www.youtube.com/embed/${encodeURIComponent(id)}?rel=0&modestbranding=1&start=${Math.floor(start || 0)}"
+    allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="Video"></iframe>`;
+}
+function mountPlayer(id, start, autoplay, attempt = 0){
+  const my = ++vidToken;
+  try { player && player.destroy && player.destroy(); } catch {}
+  player = null; playerReady = false; pendingId = null;
+  $(".player").innerHTML = '<div id="player"></div>';
+  requestAnimationFrame(() => setTimeout(async () => {      // let the now-visible panel get its size first
+    if (my !== vidToken) return;
+    try { await ytApiReady(); }
+    catch { if (my === vidToken) { fallbackIframe(id, start); setStatus("Showing a basic player: timestamp jumps need the full YouTube player.", true); } return; }
+    if (my !== vidToken || !document.getElementById("player")) return;
+    try { makePlayer(id, start, autoplay); } catch { if (attempt < 2) return mountPlayer(id, start, autoplay, attempt + 1); }
+    setTimeout(() => {                                        // watchdog
+      if (my !== vidToken || videoLooksLoaded(id)) return;
+      const t = lastPos.id === id && lastPos.t ? lastPos.t : start;
+      if (attempt < 2) mountPlayer(id, t, autoplay, attempt + 1);
+      else setStatus("The video is slow to load. Press ⟳ Refresh video (or R) to try again.", true);
+    }, 7000);
+  }, 60));
+}
 function loadVideo(id){
   currentVideoId = id; lastPos.id = id; lastPos.t = 0; lastPos.playing = false;
-  if (playerReady) player.cueVideoById(id); else pendingId = id;
+  mountPlayer(id, 0, false);
 }
 function seek(sec){
   if (!playerReady) return;
@@ -621,13 +669,9 @@ function refreshVideo(){
       playing = st === 1 || st === 3 || playing && st !== 2;
     }
   } catch {}
-  try { player && player.destroy && player.destroy(); } catch {}
-  $(".player").innerHTML = '<div id="player"></div>';
-  playerReady = false; pendingId = null;
   const btn = $("#refreshVid"); if (btn) { btn.disabled = true; setTimeout(() => btn.disabled = false, 1500); }
   setStatus(`Video refreshed. Resuming at ${fmtTime(t)}.`);
-  if (window.YT && YT.Player) makePlayer(id, t, playing);
-  else { window.onYouTubeIframeAPIReady = () => makePlayer(id, t, playing); loadYTApi(); }   // the API itself failed to load
+  mountPlayer(id, t, playing);
 }
 const fmtTime = s => { s = Math.floor(s || 0); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = String(s % 60).padStart(2, "0");
   return h ? `${h}:${String(m).padStart(2, "0")}:${x}` : `${m}:${x}`; };

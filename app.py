@@ -1361,7 +1361,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "6.1"
+APP_VERSION = "6.2"
 
 
 def settings_state():
