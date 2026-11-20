@@ -1285,7 +1285,9 @@ def stream(gen):
 @app.get("/")
 def index():
     theme = cfg("THEME", "system").lower()
-    return render_template("index.html", theme=theme if theme in ("system", "light", "dark") else "system")
+    ui = cfg("UI_LANG", "en").lower()
+    return render_template("index.html", theme=theme if theme in ("system", "light", "dark") else "system",
+                           ui=ui if ui in ("en", "hi") else "en")
 
 
 @app.post("/api/theme")
@@ -1298,6 +1300,19 @@ def api_theme():
     except OSError:
         os.environ["THEME"] = t
     return jsonify(theme=t)
+
+
+@app.post("/api/uilang")
+def api_uilang():
+    """Interface language: en (English) or hi (Hindi). Notes language is chosen separately."""
+    u = (request.get_json(force=True).get("ui") or "").lower()
+    if u not in ("en", "hi"):
+        return jsonify(error="bad language"), 400
+    try:
+        save_env({"UI_LANG": u})
+    except OSError:
+        os.environ["UI_LANG"] = u
+    return jsonify(ui=u)
 
 
 @app.post("/api/search")
@@ -1346,7 +1361,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "6.0"
+APP_VERSION = "6.1"
 
 
 def settings_state():

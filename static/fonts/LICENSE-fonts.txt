@@ -1,3 +1,6 @@
 The ekagra wordmark uses a subset of Montserrat (ExtraBold), Copyright 2011 The Montserrat Project Authors
 (https://github.com/JulietaUla/Montserrat), licensed under the SIL Open Font License, Version 1.1.
 https://openfontlicense.org
+
+The Hindi wordmark (एकाग्र) uses a subset of Mukta ExtraBold, Copyright 2015 Ek Type
+(https://github.com/EkType/Mukta), licensed under the SIL Open Font License, Version 1.1.

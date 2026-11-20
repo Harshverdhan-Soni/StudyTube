@@ -104,6 +104,17 @@ def chosen_theme():
     return "dark"
 
 
+def chosen_ui():
+    """UI_LANG from .env: en (default) or hi."""
+    try:
+        for line in (BASE / ".env").read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith("UI_LANG="):
+                return "hi" if line.split("=", 1)[1].strip().lower() == "hi" else "en"
+    except OSError:
+        pass
+    return "en"
+
+
 THEME_COLORS = {
     "dark": {"bg": "#161614", "ink": "#ecebe6", "muted": "#9c9a92", "accent": "#F7931E", "gif": "splash.gif"},
     "light": {"bg": "#F6F5F1", "ink": "#12263F", "muted": "#5B5853", "accent": "#C2410C", "gif": "splash-light.gif"},
@@ -119,18 +130,28 @@ def splash_html(theme):
     gif = base64.b64encode(gif_path.read_bytes()).decode()
     wm_path = BASE / "static" / "fonts" / "ekagra-wordmark.woff"
     wm = base64.b64encode(wm_path.read_bytes()).decode() if wm_path.exists() else ""
-    return f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    hi = chosen_ui() == "hi"
+    hi_path = BASE / "static" / "fonts" / "ekagra-wordmark-hi.woff"
+    wmh = base64.b64encode(hi_path.read_bytes()).decode() if hi and hi_path.exists() else ""
+    lang_attr, h1cls = ("hi", "hi") if hi else ("en", "")
+    if hi:
+        name, sub, tag, wait = "एकाग्र", "केंद्रित अध्ययन, जिज्ञासा से महारत तक।", "पढ़ाई करें, स्क्रॉल नहीं।", "तैयारी हो रही है"
+    else:
+        name, sub, tag, wait = "ekagra", "Focused learning, from curiosity to mastery.", "Study, not scroll.", "Getting things ready"
+    return f"""<!DOCTYPE html><html lang="{lang_attr}"><head><meta charset="utf-8"><style>
 html,body{{margin:0;height:100%;background:{c["bg"]};color:{c["ink"]};font:15px system-ui,"Segoe UI",sans-serif;
   display:flex;align-items:center;justify-content:center;user-select:none;overflow:hidden}}
 .c{{text-align:center}} img{{width:160px;height:160px}}
 @font-face{{font-family:"ekagraWM";src:url(data:font/woff;base64,{wm}) format("woff");font-weight:800}}
-h1{{font:800 34px "ekagraWM",system-ui,sans-serif;margin:14px 0 4px;letter-spacing:-.01em}} h1 span{{color:{c["accent"]}}}
+@font-face{{font-family:"ekagraHI";src:url(data:font/woff;base64,{wmh}) format("woff");font-weight:800}}
+h1{{font:800 34px "ekagraWM",system-ui,sans-serif;margin:14px 0 4px;letter-spacing:-.01em}}
+h1.hi{{font:800 38px "ekagraHI","Nirmala UI",sans-serif;letter-spacing:0}} h1 span{{color:{c["accent"]}}}
 .sub{{color:{c["muted"]};font-size:13px;margin:0 0 10px}}
 .tag{{color:{c["ink"]};font-weight:600;font-size:16px;margin:0 0 14px}}
 p{{color:{c["muted"]};margin:0}} .dots::after{{content:"";animation:d 1.2s steps(4) infinite}}
 @keyframes d{{0%{{content:""}}25%{{content:"."}}50%{{content:".."}}75%{{content:"..."}}}}
 </style></head><body><div class="c"><img src="data:image/gif;base64,{gif}" alt="">
-<h1>ekagra<span>.</span></h1><p class="sub">Focused learning, from curiosity to mastery.</p><p class="tag">Study, not scroll.</p><p>Getting things ready<span class="dots"></span></p></div></body></html>"""
+<h1 class="{h1cls}">{name}<span>.</span></h1><p class="sub">{sub}</p><p class="tag">{tag}</p><p>{wait}<span class="dots"></span></p></div></body></html>"""
 
 
 SPLASH_MIN_SECONDS = 2.0   # one full page-turn of the animation

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="{{ theme }}">
+<html lang="{{ ui }}" data-theme="{{ theme }}" data-ui="{{ ui }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -117,6 +117,12 @@
   @font-face{font-family:"ekagraWM";src:url("/static/fonts/ekagra-wordmark.woff") format("woff");font-weight:800;font-display:swap}
   .brand .bt{display:flex;flex-direction:column;gap:3px}
   .brand .wm{color:var(--ink);font-family:"ekagraWM",system-ui,sans-serif;font-weight:800;font-size:27px;letter-spacing:-.01em}
+  @font-face{font-family:"ekagraHI";src:url("/static/fonts/ekagra-wordmark-hi.woff") format("woff");font-weight:800;font-display:swap}
+  .brand .wm.hi{font-family:"ekagraHI","Nirmala UI",sans-serif;font-size:29px;letter-spacing:0;line-height:1.15}
+  #uiLangBtn{font-weight:700;min-width:64px}
+  #siteFoot{max-width:1400px;margin:8px auto 0;padding:14px 24px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;
+    font-size:12.5px;color:var(--muted)}
+  #siteFoot b{color:var(--head,var(--ink));font-weight:600}
   .brand .tg{font-size:11px;font-weight:500;color:var(--muted,#8b887f);letter-spacing:0}
   .brand .wm span{color:#c2410c}
   :root[data-theme="dark"] .brand .wm span{color:#F7931E}
@@ -307,7 +313,7 @@
   .welcome .tagline{font-size:17px;font-weight:700;color:var(--head);letter-spacing:-.01em;margin-bottom:2px}
   .welcome .wtext{font-size:14px}
   .wfeats{display:flex;gap:8px;flex-wrap:wrap}
-  .wfeats span{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--head);background:var(--bg);
+  .wfeats > span{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--head);background:var(--bg);
     border:1px solid var(--line);border-radius:999px;padding:5px 11px}
   .wfeats svg{color:#16a34a;flex:none}
   .lib-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 12px}
@@ -378,46 +384,47 @@
 </head>
 <body>
 <header>
-  <h1><div class="home brand" id="homeLink" title="Home"><img class="logo" src="/static/icon-192.png" alt=""><span class="bt"><span class="wm">ekagra<span>.</span></span><small class="tg">Focused learning, from curiosity to mastery.</small></span></div>
-    <div class="hbtns"><button class="hbtn" id="bookChip" type="button"></button><button class="hbtn" id="recentBtn" title="Previously searched">🕘 Recent</button>
+  <h1><div class="home brand" id="homeLink" title="Home"><img class="logo" src="/static/icon-192.png" alt=""><span class="bt"><span class="wm" id="wordmark">ekagra<span>.</span></span><small class="tg" data-i18n>Focused learning, from curiosity to mastery.</small></span></div>
+    <div class="hbtns"><button class="hbtn" id="bookChip" type="button"></button><button class="hbtn" id="recentBtn" title="Previously searched" data-i18n-title="Previously searched">🕘 <span data-i18n>Recent</span></button>
+    <button class="hbtn" id="uiLangBtn" type="button"></button>
     <button class="hbtn" id="themeBtn" type="button" aria-label="Theme"></button>
-    <button class="gear" id="gear" title="Settings">⚙</button></div></h1>
+    <button class="gear" id="gear" title="Settings" data-i18n-title="Settings">⚙</button></div></h1>
   <div id="recentPanel" class="hidden">
-    <input id="rfilter" type="text" placeholder="Filter your saved notes…" autocomplete="off">
+    <input id="rfilter" type="text" placeholder="Filter your saved notes…" data-i18n-ph="Filter your saved notes…" autocomplete="off">
     <div id="rlist"></div>
   </div>
   <form id="f" class="hero">
     <div class="hero-top">
-      <h2 class="hero-title">What would you like to <span>learn</span> today?</h2>
+      <h2 class="hero-title" data-i18n-html>What would you like to <span>learn</span> today?</h2>
       <div class="modeseg" role="group" aria-label="What to do">
-        <button type="button" data-mode="video" class="on" aria-pressed="true"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M10 9l5 3-5 3z"></path></svg>Video lesson</button>
-        <button type="button" data-mode="explain" aria-pressed="false"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2z"></path></svg>Explain a term</button>
+        <button type="button" data-mode="video" class="on" aria-pressed="true"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M10 9l5 3-5 3z"></path></svg><span data-i18n>Video lesson</span></button>
+        <button type="button" data-mode="explain" aria-pressed="false"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2z"></path></svg><span data-i18n>Explain a term</span></button>
       </div>
     </div>
     <div class="sbar">
       <svg class="sicon" aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
       <input id="q" type="text" placeholder="What do you want to learn? e.g. backpropagation intuition" autofocus>
-      <select id="lang" title="Language of the notes">
-        <option>English</option><option>Hindi</option><option>Hinglish</option>
+      <select id="lang" title="Language of the notes" data-i18n-title="Language of the notes">
+        <option value="English" data-i18n>English</option><option value="Hindi" data-i18n>Hindi</option><option value="Hinglish" data-i18n>Hinglish</option>
       </select>
       <button class="primary" id="go">Find &amp; summarise</button>
     </div>
-    <span class="hint">Press <kbd>Enter</kbd> to search · notes in English, Hindi or Hinglish</span>
+    <span class="hint" data-i18n-html>Press <kbd>Enter</kbd> to search · notes in English, Hindi or Hinglish</span>
   </form>
   <div id="prog" class="hidden">
     <div class="top">
       <div class="steps">
-        <span class="step" data-s="search">1 · Search YouTube</span>
-        <span class="step" data-s="pick">2 · Pick best video</span>
-        <span class="step" data-s="transcript">3 · Get transcript</span>
-        <span class="step" data-s="notes">4 · Write notes</span>
+        <span class="step" data-s="search" data-i18n>1 · Search YouTube</span>
+        <span class="step" data-s="pick" data-i18n>2 · Pick best video</span>
+        <span class="step" data-s="transcript" data-i18n>3 · Get transcript</span>
+        <span class="step" data-s="notes" data-i18n>4 · Write notes</span>
       </div>
       <span id="elapsed">0s</span>
-      <button type="button" id="cancel">Cancel</button>
-      <button type="button" id="retry" class="primary hidden">Try again</button>
+      <button type="button" id="cancel" data-i18n>Cancel</button>
+      <button type="button" id="retry" class="primary hidden" data-i18n>Try again</button>
     </div>
     <div class="bar busy" id="bar"><i></i></div>
-    <div id="pmsg">Starting…</div>
+    <div id="pmsg" data-i18n>Starting…</div>
   </div>
   <div id="status"></div>
 </header>
@@ -429,14 +436,14 @@
     <div class="alts" id="alts"></div>
   </section>
   <section class="card notes">
-    <button type="button" id="showNotes" title="Show the notes again"><b>⇤</b><span>Show notes</span></button>
+    <button type="button" id="showNotes" title="Show the notes again" data-i18n-title="Show the notes again"><b>⇤</b><span data-i18n>Show notes</span></button>
     <div class="tabs">
-      <button class="tab on" data-p="sum">Summary</button>
-      <button class="tab" data-p="tr">Transcript <span class="badge hidden" id="trn"></span></button>
-      <button class="tab" data-p="rm">Roadmap</button>
+      <button class="tab on" data-p="sum" data-i18n>Summary</button>
+      <button class="tab" data-p="tr"><span data-i18n>Transcript</span> <span class="badge hidden" id="trn"></span></button>
+      <button class="tab" data-p="rm" data-i18n>Roadmap</button>
       <span class="sp"></span>
-      <button class="copy tbtn" id="wideBtn" title="Hide the notes panel and make the video wider">⇥ Wide video</button>
-      <button class="copy" id="copy">Copy notes</button>
+      <button class="copy tbtn" id="wideBtn" title="Hide the notes panel and make the video wider" data-i18n-title="Hide the notes panel and make the video wider">⇥ Wide video</button>
+      <button class="copy" id="copy" data-i18n>Copy notes</button>
     </div>
     <div class="pane" id="sum"></div>
     <div class="pane hidden" id="tr"></div>
@@ -444,25 +451,26 @@
   </section>
 </main>
 <div id="empty"><div id="home">
-  <div class="welcome"><div><div class="tagline">Study, not scroll.</div><div class="wtext">Type a topic. You'll get the single best video to watch, and notes you can read instead.</div></div>
-    <div class="wfeats"><span><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>One best video</span><span><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Notes to read</span><span><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>No feed, no Shorts, no autoplay</span></div></div>
+  <div class="welcome"><div><div class="tagline" data-i18n>Study, not scroll.</div><div class="wtext" data-i18n>Type a topic. You'll get the single best video to watch, and notes you can read instead.</div></div>
+    <div class="wfeats"><span><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg><span data-i18n>One best video</span></span><span><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg><span data-i18n>Notes to read</span></span><span><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg><span data-i18n>No feed, no Shorts, no autoplay</span></span></div></div>
   <div id="homeShelf"></div>
   <div id="homeRecent"></div>
 </div></div>
+<footer id="siteFoot"><span id="footCopy"></span><span id="footDev"></span></footer>
 
 <aside id="exDrawer" class="hidden" aria-label="Explanation">
   <div class="exhead">
     <button type="button" id="exBack" class="iconbtn hidden" title="Back to the previous term" aria-label="Back">←</button>
-    <div style="flex:1;min-width:0"><div class="eyebrow">QUICK EXPLAIN</div><h2 id="exTerm"></h2><div id="exCtx"></div></div>
+    <div style="flex:1;min-width:0"><div class="eyebrow" data-i18n>QUICK EXPLAIN</div><h2 id="exTerm"></h2><div id="exCtx"></div></div>
     <button type="button" id="exClose" class="iconbtn" title="Close (Esc)" aria-label="Close">✕</button>
   </div>
   <div id="exStatus"></div>
   <div id="exBody" class="pane"></div>
   <div id="exRelated"></div>
   <div class="exfoot">
-    <button type="button" id="exVideo" class="primary">Find a video lesson on this</button>
-    <button type="button" id="exCopy">Copy</button>
-    <small>AI-written explanation. Check important facts in your textbook.</small>
+    <button type="button" id="exVideo" class="primary" data-i18n>Find a video lesson on this</button>
+    <button type="button" id="exCopy" data-i18n>Copy</button>
+    <small data-i18n>AI-written explanation. Check important facts in your textbook.</small>
   </div>
 </aside>
 <button type="button" id="selExplain" class="primary hidden"></button>
@@ -470,12 +478,12 @@
 <div id="bookDlg" class="hidden"><div class="box" role="dialog" aria-modal="true"></div></div>
 <div id="rmCard" class="hidden"><div class="box" role="dialog" aria-modal="true" aria-labelledby="rmCardTitle"></div></div>
 <div id="setup" class="hidden"><form class="box" id="sf">
-  <h2>Settings</h2>
-  <p>Keys are saved only on this computer (in the app's .env file). Leave a key blank to keep the saved one.</p>
+  <h2 data-i18n>Settings</h2>
+  <p data-i18n>Keys are saved only on this computer (in the app's .env file). Leave a key blank to keep the saved one.</p>
   <label>YouTube Data API key <small data-ok="youtube_key"></small></label>
   <input type="password" id="s_yt" placeholder="AIza…" autocomplete="off">
   <small>Google Cloud Console → enable “YouTube Data API v3” → Credentials → Create API key</small>
-  <label>Who writes the notes?</label>
+  <label data-i18n>Who writes the notes?</label>
   <div class="row" style="flex-wrap:wrap">
     <label><input type="radio" name="prov" value="gemini"> Gemini (free API)</label>
     <label><input type="radio" name="prov" value="groq"> Groq (free API)</label>
@@ -489,22 +497,80 @@
     <input type="password" id="s_ak" placeholder="sk-ant-…" autocomplete="off"></div>
   <div data-for="ollama"><label>Ollama model</label>
     <input type="text" id="s_om" placeholder="llama3.1"></div>
-  <label for="s_speed">AI speed</label>
+  <label for="s_speed" data-i18n>AI speed</label>
   <select id="s_speed" style="width:100%">
-    <option value="fast">Fast: answers start in seconds (recommended)</option>
-    <option value="balanced">Balanced: a little more reasoning</option>
-    <option value="thorough">Thorough: deepest reasoning, can take a minute or more</option>
+    <option value="fast" data-i18n>Fast: answers start in seconds (recommended)</option>
+    <option value="balanced" data-i18n>Balanced: a little more reasoning</option>
+    <option value="thorough" data-i18n>Thorough: deepest reasoning, can take a minute or more</option>
   </select>
   <label>Groq API key <small data-ok="groq_key"></small></label>
   <input type="password" id="s_qk" placeholder="gsk_… (optional unless Groq is chosen above)" autocomplete="off">
   <small>Free at console.groq.com/keys. Also used to transcribe videos that have no captions (Whisper).</small>
   <div id="s_msg" style="margin-top:14px;font-size:13px;min-height:18px"></div>
   <div class="act"><small id="s_ver" style="flex:1;align-self:center"></small>
-    <button type="button" id="s_cancel">Close</button><button class="primary" id="s_save">Save</button></div>
+    <button type="button" id="s_cancel" data-i18n>Close</button><button class="primary" id="s_save" data-i18n>Save</button></div>
 </form></div>
 
 <script>
 const $ = s => document.querySelector(s);
+// ---- English / हिंदी interface. Keys are the English text; anything missing stays in English.
+let UI = document.documentElement.dataset.ui === "hi" ? "hi" : "en";
+const HI = {
+  "Focused learning, from curiosity to mastery.": "केंद्रित अध्ययन, जिज्ञासा से महारत तक।",
+  "Recent": "हाल के", "Previously searched": "पहले खोजे गए", "Settings": "सेटिंग्स", "Home": "होम",
+  "Filter your saved notes…": "अपने सहेजे नोट्स में खोजें…",
+  'What would you like to <span>learn</span> today?': 'आज आप क्या <span>सीखना</span> चाहेंगे?',
+  "Video lesson": "वीडियो पाठ", "Explain a term": "शब्द समझें", "Language of the notes": "नोट्स की भाषा",
+  "English": "अंग्रेज़ी", "Hindi": "हिंदी", "Hinglish": "हिंग्लिश",
+  'Press <kbd>Enter</kbd> to search · notes in English, Hindi or Hinglish': 'खोजने के लिए <kbd>Enter</kbd> दबाएँ · नोट्स अंग्रेज़ी, हिंदी या हिंग्लिश में',
+  "What do you want to learn? e.g. backpropagation intuition": "आप क्या सीखना चाहते हैं? जैसे: backpropagation intuition",
+  "Find & summarise": "खोजें और सारांश बनाएँ",
+  "Which term or concept? e.g. minterm, entropy, TCP handshake": "कौन-सा शब्द या अवधारणा? जैसे: minterm, entropy, TCP handshake",
+  "Explain": "समझाएँ",
+  "1 · Search YouTube": "1 · YouTube पर खोज", "2 · Pick best video": "2 · सबसे अच्छा वीडियो चुनना",
+  "3 · Get transcript": "3 · ट्रांसक्रिप्ट लाना", "4 · Write notes": "4 · नोट्स लिखना",
+  "Cancel": "रद्द करें", "Try again": "फिर से प्रयास करें", "Starting…": "शुरू हो रहा है…",
+  "Summary": "सारांश", "Transcript": "ट्रांसक्रिप्ट", "Roadmap": "रोडमैप", "Wide video": "चौड़ा वीडियो",
+  "Show notes": "नोट्स दिखाएँ", "Copy notes": "नोट्स कॉपी करें", "Show the notes again": "नोट्स फिर से दिखाएँ",
+  "Hide the notes panel and make the video wider": "नोट्स छिपाएँ और वीडियो चौड़ा करें",
+  "Copied with formatting ✓": "फ़ॉर्मेटिंग सहित कॉपी हुआ ✓", "Copied as text ✓": "टेक्स्ट के रूप में कॉपी हुआ ✓",
+  "Study, not scroll.": "पढ़ाई करें, स्क्रॉल नहीं।",
+  "Type a topic. You'll get the single best video to watch, and notes you can read instead.": "कोई विषय लिखें। आपको देखने के लिए सबसे अच्छा एक वीडियो मिलेगा, और पढ़ने के लिए नोट्स।",
+  "One best video": "एक सबसे अच्छा वीडियो", "Notes to read": "पढ़ने के लिए नोट्स", "No feed, no Shorts, no autoplay": "न फ़ीड, न Shorts, न ऑटोप्ले",
+  "Your books": "आपकी पुस्तकें",
+  "Open a book, then search. Everything you find is kept inside it.": "कोई पुस्तक खोलें, फिर खोजें। जो भी मिलेगा, उसी में सहेजा जाएगा।",
+  "Create a book for each subject to keep your notes organised.": "नोट्स व्यवस्थित रखने के लिए हर विषय की एक पुस्तक बनाएँ।",
+  "New book": "नई पुस्तक", "One book per subject": "हर विषय के लिए एक पुस्तक", "Open →": "खोलें →",
+  "Last used {t}": "अंतिम उपयोग: {t}", "Empty": "खाली", "Unsorted": "बिना पुस्तक", "Not in any book yet": "अभी किसी पुस्तक में नहीं",
+  "Open {t}": "{t} खोलें", "Items not in any book": "जो किसी पुस्तक में नहीं हैं", "Books": "पुस्तकें",
+  "Open book: {t}. New searches are saved here.": "खुली पुस्तक: {t}। नई खोजें इसी में सहेजी जाएँगी।",
+  "No book open. New searches go to Unsorted. Click to choose a book.": "कोई पुस्तक नहीं खुली। नई खोजें “बिना पुस्तक” में जाएँगी। पुस्तक चुनने के लिए क्लिक करें।",
+  "‹ Books": "‹ पुस्तकें", "Rename": "नाम बदलें", "Delete book": "पुस्तक हटाएँ", "Move all {n} to a book…": "सभी {n} को पुस्तक में ले जाएँ…",
+  "Video notes": "वीडियो नोट्स", "Explanations": "व्याख्याएँ",
+  "Search your video notes…": "अपने वीडियो नोट्स खोजें…", "Search your explanations…": "अपनी व्याख्याएँ खोजें…",
+  "Search your library": "अपनी लाइब्रेरी खोजें", "Page {p} of {n}": "पृष्ठ {p} / {n}",
+  "Nothing matches “{q}”.": "“{q}” से कुछ मेल नहीं खाता।", "Nothing unsorted here.": "यहाँ बिना पुस्तक का कुछ नहीं है।",
+  "No video notes in this book yet. Type a topic above and press Find &amp; summarise: it will be saved here.": "इस पुस्तक में अभी कोई वीडियो नोट नहीं है। ऊपर कोई विषय लिखें और “खोजें और सारांश बनाएँ” दबाएँ: वह यहीं सहेजा जाएगा।",
+  "No explanations in this book yet. Switch to “Explain a term” above, or select a word in any notes.": "इस पुस्तक में अभी कोई व्याख्या नहीं है। ऊपर “शब्द समझें” चुनें, या किसी भी नोट्स में कोई शब्द चुनें।",
+  "Move to another book": "दूसरी पुस्तक में ले जाएँ", "Remove from history": "इतिहास से हटाएँ",
+  "Explained": "समझाया गया", "No match.": "कुछ नहीं मिला।", "Nothing yet. Your searches will appear here.": "अभी कुछ नहीं। आपकी खोजें यहाँ दिखेंगी।",
+  "just now": "अभी-अभी", "{n} min ago": "{n} मिनट पहले", "{n} h ago": "{n} घंटे पहले", "{n} d ago": "{n} दिन पहले",
+  "System (follows Windows)": "सिस्टम (Windows के अनुसार)", "Light": "हल्की", "Dark": "गहरी",
+  "Theme: {n}. Click to change.": "थीम: {n}। बदलने के लिए क्लिक करें।", "Theme: {n}": "थीम: {n}",
+  "QUICK EXPLAIN": "त्वरित व्याख्या", "Find a video lesson on this": "इस पर वीडियो पाठ खोजें", "Copy": "कॉपी करें",
+  "AI-written explanation. Check important facts in your textbook.": "AI द्वारा लिखी व्याख्या। महत्वपूर्ण तथ्य अपनी पाठ्यपुस्तक से जाँच लें।",
+  "Keys are saved only on this computer (in the app's .env file). Leave a key blank to keep the saved one.": "कुंजियाँ केवल इसी कंप्यूटर पर (ऐप की .env फ़ाइल में) सहेजी जाती हैं। सहेजी हुई कुंजी रखने के लिए खाली छोड़ दें।",
+  "Who writes the notes?": "नोट्स कौन लिखेगा?", "AI speed": "AI की गति",
+  "Fast: answers start in seconds (recommended)": "तेज़: उत्तर कुछ ही सेकंड में (अनुशंसित)",
+  "Balanced: a little more reasoning": "संतुलित: थोड़ा अधिक विचार",
+  "Thorough: deepest reasoning, can take a minute or more": "गहन: सबसे गहरा विचार, एक मिनट या अधिक लग सकता है",
+  "Close": "बंद करें", "Save": "सहेजें",
+  "© {y} Centre for Development of Advanced Computing (C-DAC). All rights reserved.": "© {y} प्रगत संगणन विकास केन्द्र (सी-डैक)। सर्वाधिकार सुरक्षित।",
+  "Developed by C-DAC Centre in North East": "सी-डैक पूर्वोत्तर केन्द्र द्वारा विकसित",
+};
+function t(s, vars){ let r = (UI === "hi" && HI[s]) || s; if (vars) for (const k in vars) r = r.split("{" + k + "}").join(vars[k]); return r; }
+const tr = t;   // for code where "t" is already a local name
+const nCount = (n, one, many, hiOne, hiMany) => UI === "hi" ? `${n} ${n === 1 ? hiOne : hiMany}` : `${n} ${n === 1 ? one : many}`;
 let player = null, playerReady = false, pendingId = null, current = null, lastQuery = "";
 
 // ---- YouTube IFrame API (lets timestamps seek the video)
@@ -623,7 +689,7 @@ document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
 });
 function setWide(on){
   $("#main").classList.toggle("wide", on);
-  $("#wideBtn").textContent = on ? "⇤ Show notes" : "⇥ Wide video";
+  $("#wideBtn").textContent = on ? "⇤ " + t("Show notes") : "⇥ " + t("Wide video");
   try { localStorage.setItem("st-wide", on ? "1" : "0"); } catch {}
 }
 $("#wideBtn").onclick = () => setWide(true);
@@ -881,9 +947,9 @@ function pickAlt(video, list){
 // ---- recent (saved notes, served from the local cache)
 let history = [];
 const ago = t => { const s = Date.now() / 1000 - t;
-  if (s < 60) return "just now"; if (s < 3600) return Math.round(s / 60) + " min ago";
-  if (s < 86400) return Math.round(s / 3600) + " h ago"; if (s < 86400 * 30) return Math.round(s / 86400) + " d ago";
-  return new Date(t * 1000).toLocaleDateString(); };
+  if (s < 60) return tr("just now"); if (s < 3600) return tr("{n} min ago", {n: Math.round(s / 60)});
+  if (s < 86400) return tr("{n} h ago", {n: Math.round(s / 3600)}); if (s < 86400 * 30) return tr("{n} d ago", {n: Math.round(s / 86400)});
+  return new Date(t * 1000).toLocaleDateString(UI === "hi" ? "hi-IN" : undefined); };
 const thumbOf = h => h.thumb || (h.video_id ? `https://i.ytimg.com/vi/${h.video_id}/mqdefault.jpg` : "");
 async function loadHistory(){
   try { history = await (await fetch("/api/history")).json(); } catch { history = []; }
@@ -901,9 +967,9 @@ const bookParam = () => lib.book || "";
 async function loadBooks(){ try { books = await (await fetch("/api/books")).json(); } catch { books = []; } if (lib.book && !bookOf(lib.book)) lib.book = null; }
 function updateBookChip(){
   const b = lib.book ? bookOf(lib.book) : null, chip = $("#bookChip");
-  chip.innerHTML = BOOK_SVG + `<span>${b ? esc(b.title) : lib.book === "" ? "Unsorted" : "Books"}</span>`;
+  chip.innerHTML = BOOK_SVG + `<span>${b ? esc(b.title) : lib.book === "" ? t("Unsorted") : t("Books")}</span>`;
   chip.classList.toggle("in", !!b);
-  chip.title = b ? `Open book: ${b.title}. New searches are saved here.` : "No book open. New searches go to Unsorted. Click to choose a book.";
+  chip.title = b ? t("Open book: {t}. New searches are saved here.", {t: b.title}) : t("No book open. New searches go to Unsorted. Click to choose a book.");
 }
 function openBook(id){ lib.book = id; lib.q = ""; lib.page.video = lib.page.explain = 0; if ($("#libSearch")) $("#libSearch").value = ""; renderHomeRecent(); }
 function renderShelf(){
@@ -911,16 +977,16 @@ function renderShelf(){
   const stat = id => { const it = history.filter(h => inBook(h, id)); const v = it.filter(h => h.kind !== "explain").length, x = it.length - v;
     return {v, x, last: it.length ? Math.max(...it.map(h => h.saved_at)) : 0}; };
   const list = books.map(b => ({...b, ...stat(b.id)})).sort((a, b) => (b.last || b.created) - (a.last || a.created));
-  const counts = s => `${s.v} video note${s.v === 1 ? "" : "s"} · ${s.x} explanation${s.x === 1 ? "" : "s"}`;
+  const counts = s => nCount(s.v, "video note", "video notes", "वीडियो नोट", "वीडियो नोट्स") + " · " + nCount(s.x, "explanation", "explanations", "व्याख्या", "व्याख्याएँ");
   const BI = `<span class="bi"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"></path><path d="M4 19.5V21h16"></path></svg></span>`;
-  $("#homeShelf").innerHTML = `<div class="shelf-head"><h2>Your books${books.length ? ` <span class="cnt">${books.length}</span>` : ""}</h2>
-      <span style="font-size:13px;color:var(--muted)">${books.length ? "Open a book, then search. Everything you find is kept inside it." : "Create a book for each subject to keep your notes organised."}</span></div>
+  $("#homeShelf").innerHTML = `<div class="shelf-head"><h2>${t("Your books")}${books.length ? ` <span class="cnt">${books.length}</span>` : ""}</h2>
+      <span style="font-size:13px;color:var(--muted)">${books.length ? t("Open a book, then search. Everything you find is kept inside it.") : t("Create a book for each subject to keep your notes organised.")}</span></div>
     <div class="shelf">
-      <button type="button" class="book new" data-book-new="1"><span class="plus">+</span><b>New book</b><small>One book per subject</small></button>
-      ${list.map(b => `<button type="button" class="book" data-book="${b.id}" style="--bc:${bookColor(b.id)}" title="Open ${esc(b.title)}">
-        ${BI}<span class="bt">${esc(b.title)}</span><span class="bm"><span>${counts(b)}<br>${b.last ? "Last used " + ago(b.last) : "Empty"}</span><span class="open">Open →</span></span></button>`).join("")}
-      ${loose.length ? `<button type="button" class="book loose" data-book="" title="Items not in any book">
-        ${BI}<span class="bt">Unsorted</span><span class="bm"><span>${counts(stat(""))}<br>Not in any book yet</span><span class="open">Open →</span></span></button>` : ""}
+      <button type="button" class="book new" data-book-new="1"><span class="plus">+</span><b>${t("New book")}</b><small>${t("One book per subject")}</small></button>
+      ${list.map(b => `<button type="button" class="book" data-book="${b.id}" style="--bc:${bookColor(b.id)}" title="${esc(t("Open {t}", {t: b.title}))}">
+        ${BI}<span class="bt">${esc(b.title)}</span><span class="bm"><span>${counts(b)}<br>${b.last ? t("Last used {t}", {t: ago(b.last)}) : t("Empty")}</span><span class="open">${t("Open →")}</span></span></button>`).join("")}
+      ${loose.length ? `<button type="button" class="book loose" data-book="" title="${t("Items not in any book")}">
+        ${BI}<span class="bt">${t("Unsorted")}</span><span class="bm"><span>${counts(stat(""))}<br>${t("Not in any book yet")}</span><span class="open">${t("Open →")}</span></span></button>` : ""}
     </div>`;
 }
 // one small dialog for: new book, rename, delete, move
@@ -986,9 +1052,9 @@ $("#bookChip").onclick = () => { if (run) return; if (!$("#main").classList.cont
 function renderBookBar(){
   const b = lib.book ? bookOf(lib.book) : null, n = history.filter(h => inBook(h, lib.book)).length;
   $("#bookBar").style.setProperty("--bc", b ? bookColor(b.id) : "#8b887f");
-  $("#bookBar").innerHTML = `<button type="button" data-bb="back">‹ Books</button><span class="dot"></span><h2>${b ? esc(b.title) : "Unsorted"}</h2>
-    ${b ? `<button type="button" data-bb="rename">Rename</button><button type="button" data-bb="delete">Delete book</button>`
-        : n ? `<button type="button" class="primary" data-bb="moveall">Move all ${n} to a book…</button>` : ""}`;
+  $("#bookBar").innerHTML = `<button type="button" data-bb="back">${t("‹ Books")}</button><span class="dot"></span><h2>${b ? esc(b.title) : t("Unsorted")}</h2>
+    ${b ? `<button type="button" data-bb="rename">${t("Rename")}</button><button type="button" data-bb="delete">${t("Delete book")}</button>`
+        : n ? `<button type="button" class="primary" data-bb="moveall">${t("Move all {n} to a book…", {n})}</button>` : ""}`;
 }
 // ---- home library: Video notes | Explanations, with search and pages that fit the window
 const lib = {tab: "video", q: "", page: {video: 0, explain: 0}, built: false, book: null};   // book: null = shelf, "" = Unsorted, else a book id
@@ -997,12 +1063,13 @@ const IMG_FALLBACK = `onerror="this.onerror=null;this.src='/static/icon-192.png'
 function libBuild(){
   $("#homeRecent").innerHTML = `<div class="bookbar" id="bookBar"></div><div class="lib-head">
       <div class="lib-tabs" role="tablist">
-        <button type="button" role="tab" data-lib="video">Video notes <span class="badge" id="libNv">0</span></button>
-        <button type="button" role="tab" data-lib="explain">Explanations <span class="badge" id="libNx">0</span></button>
+        <button type="button" role="tab" data-lib="video">${t("Video notes")} <span class="badge" id="libNv">0</span></button>
+        <button type="button" role="tab" data-lib="explain">${t("Explanations")} <span class="badge" id="libNx">0</span></button>
       </div>
-      <input id="libSearch" type="text" autocomplete="off" aria-label="Search your library">
+      <input id="libSearch" type="text" autocomplete="off" aria-label="${t("Search your library")}">
       <div class="lib-pager"><button type="button" id="libPrev" aria-label="Previous page">‹</button><span id="libPage"></span><button type="button" id="libNext" aria-label="Next page">›</button></div>
     </div><div id="libGrid"></div>`;
+  $("#libSearch").value = lib.q;
   $("#homeRecent").querySelectorAll("[data-lib]").forEach(b => b.onclick = () => {
     lib.tab = b.dataset.lib; try { localStorage.setItem("st-libtab", lib.tab); } catch {}
     renderHomeRecent();
@@ -1032,7 +1099,7 @@ function renderHomeRecent(){
   $("#libNv").textContent = vids.length; $("#libNx").textContent = exps.length;
   $("#homeRecent").querySelectorAll("[data-lib]").forEach(b => { b.classList.toggle("on", b.dataset.lib === lib.tab); b.setAttribute("aria-selected", b.dataset.lib === lib.tab); });
   const isV = lib.tab === "video", all = isV ? vids : exps, f = lib.q.trim().toLowerCase();
-  $("#libSearch").placeholder = isV ? "Search your video notes…" : "Search your explanations…";
+  $("#libSearch").placeholder = t(isV ? "Search your video notes…" : "Search your explanations…");
   const items = all.filter(h => !f || (h.title + " " + h.query + " " + (h.channel || "") + " " + (h.snippet || "")).toLowerCase().includes(f));
   // how many cards fit: columns from the width, rows from the height left in the window
   const grid = $("#libGrid"), gap = 14, W = grid.clientWidth || 1000;
@@ -1044,25 +1111,25 @@ function renderHomeRecent(){
   lib.page[lib.tab] = Math.max(0, Math.min(pages - 1, lib.page[lib.tab]));
   const pg = lib.page[lib.tab], slice = items.slice(pg * per, pg * per + per);
   grid.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
-  $("#libPage").textContent = items.length ? `Page ${pg + 1} of ${pages}` : "";
+  $("#libPage").textContent = items.length ? t("Page {p} of {n}", {p: pg + 1, n: pages}) : "";
   $("#libPrev").disabled = pg <= 0; $("#libNext").disabled = pg >= pages - 1;
   $(".lib-pager").style.visibility = pages > 1 ? "visible" : "hidden";
   if (!slice.length) {
-    grid.innerHTML = `<div class="lib-empty">${f ? `Nothing matches “${esc(lib.q.trim())}”.`
-      : lib.book === "" ? "Nothing unsorted here."
-      : isV ? "No video notes in this book yet. Type a topic above and press Find &amp; summarise: it will be saved here."
-            : "No explanations in this book yet. Switch to “Explain a term” above, or select a word in any notes."}</div>`;
+    grid.innerHTML = `<div class="lib-empty">${f ? t("Nothing matches “{q}”.", {q: esc(lib.q.trim())})
+      : lib.book === "" ? t("Nothing unsorted here.")
+      : isV ? t("No video notes in this book yet. Type a topic above and press Find &amp; summarise: it will be saved here.")
+            : t("No explanations in this book yet. Switch to “Explain a term” above, or select a word in any notes.")}</div>`;
     return;
   }
   grid.innerHTML = isV ? slice.map(h => `<div class="rcard" data-k="${h.key}" title="${esc(h.title)}">
       <img class="th" src="${thumbOf(h)}" alt="" loading="lazy" ${IMG_FALLBACK}>
-      <button class="mv" data-mv="${h.key}" title="Move to another book" aria-label="Move to another book">${MOVE_SVG}</button>
-      <button class="del" data-del="${h.key}" title="Remove from history">×</button>
+      <button class="mv" data-mv="${h.key}" title="${t("Move to another book")}" aria-label="${t("Move to another book")}">${MOVE_SVG}</button>
+      <button class="del" data-del="${h.key}" title="${t("Remove from history")}">×</button>
       <div class="b"><div class="t">${esc(h.title)}</div>
       <div class="m"><span class="q">${esc(h.query)}</span>${h.duration} · ${ago(h.saved_at)}</div></div></div>`).join("")
     : slice.map(h => `<div class="xcard" data-k="${h.key}" title="${esc(h.title)}">
-      <button class="mv" data-mv="${h.key}" title="Move to another book" aria-label="Move to another book">${MOVE_SVG}</button>
-      <button class="del" data-del="${h.key}" title="Remove from history">×</button>
+      <button class="mv" data-mv="${h.key}" title="${t("Move to another book")}" aria-label="${t("Move to another book")}">${MOVE_SVG}</button>
+      <button class="del" data-del="${h.key}" title="${t("Remove from history")}">×</button>
       <div class="t">${esc(h.title)}</div><div class="s">${libSnippet(h.snippet)}</div>
       <div class="m">${ago(h.saved_at)}${h.lang && h.lang !== "English" ? " · " + esc(h.lang) : ""}</div></div>`).join("");
 }
@@ -1074,9 +1141,9 @@ function renderRecentList(){
   $("#rlist").innerHTML = list.length ? list.map(h => `<div class="ritem" data-k="${h.key}">
       <img class="${h.kind === "explain" ? "exth" : ""}" src="${thumbOf(h)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='/static/icon-192.png';this.style.objectFit='contain';this.style.padding='10px'">
       <div style="min-width:0;padding-right:24px"><div class="t">${esc(h.title)}</div>
-      <div class="m"><span class="q">${h.kind === "explain" ? "Explained" : esc(h.query)}</span>${ago(h.saved_at)}${(h.books || []).map(id => bookOf(id)).filter(Boolean).map(b => " · in " + esc(b.title)).join("")}${h.lang && h.lang !== "English" ? " · " + esc(h.lang) : ""}</div></div>
-      <button class="del" data-del="${h.key}" title="Remove from history">×</button></div>`).join("")
-    : `<div style="padding:14px;color:var(--muted);font-size:13px">${history.length ? "No match." : "Nothing yet. Your searches will appear here."}</div>`;
+      <div class="m"><span class="q">${h.kind === "explain" ? t("Explained") : esc(h.query)}</span>${ago(h.saved_at)}${(h.books || []).map(id => bookOf(id)).filter(Boolean).map(b => UI === "hi" ? " · " + esc(b.title) + " में" : " · in " + esc(b.title)).join("")}${h.lang && h.lang !== "English" ? " · " + esc(h.lang) : ""}</div></div>
+      <button class="del" data-del="${h.key}" title="${t("Remove from history")}">×</button></div>`).join("")
+    : `<div style="padding:14px;color:var(--muted);font-size:13px">${history.length ? t("No match.") : t("Nothing yet. Your searches will appear here.")}</div>`;
 }
 function openRecent(){ $("#recentPanel").classList.remove("hidden"); $("#recentBtn").classList.add("on"); renderRecentList(); $("#rfilter").focus(); }
 function closeRecent(){ $("#recentPanel").classList.add("hidden"); $("#recentBtn").classList.remove("on"); }
@@ -1342,8 +1409,8 @@ const THEME_NAME = {system: "System (follows Windows)", light: "Light", dark: "D
 function applyTheme(t){
   document.documentElement.dataset.theme = t;
   $("#themeBtn").innerHTML = THEME_ICON[t];
-  $("#themeBtn").title = `Theme: ${THEME_NAME[t]}. Click to change.`;
-  $("#themeBtn").setAttribute("aria-label", `Theme: ${THEME_NAME[t]}`);
+  $("#themeBtn").title = tr("Theme: {n}. Click to change.", {n: tr(THEME_NAME[t])});
+  $("#themeBtn").setAttribute("aria-label", tr("Theme: {n}", {n: tr(THEME_NAME[t])}));
   // the roadmap's connector lines are measured from the layout, so redraw them
   requestAnimationFrame(() => { ["#rm", "#rmFull"].forEach(s => { if ($(s).querySelector(".rm")) rmDrawLinks($(s)); }); });
 }
@@ -1363,9 +1430,35 @@ const MODE_TEXT = {
 function setMode(m){
   searchMode = m;
   document.querySelectorAll(".modeseg button").forEach(b => { b.classList.toggle("on", b.dataset.mode === m); b.setAttribute("aria-pressed", b.dataset.mode === m); });
-  $("#q").placeholder = MODE_TEXT[m].ph; $("#go").textContent = MODE_TEXT[m].btn;
+  $("#q").placeholder = t(MODE_TEXT[m].ph); $("#go").textContent = t(MODE_TEXT[m].btn);
 }
 document.querySelectorAll(".modeseg button").forEach(b => b.onclick = () => { setMode(b.dataset.mode); $("#q").focus(); });
+
+// ---- interface language: English / हिंदी
+function applyUI(){
+  document.documentElement.lang = UI; document.documentElement.dataset.ui = UI;
+  document.title = UI === "hi" ? "एकाग्र" : "ekagra";
+  const wm = $("#wordmark"); wm.classList.toggle("hi", UI === "hi"); wm.innerHTML = (UI === "hi" ? "एकाग्र" : "ekagra") + "<span>.</span>";
+  document.querySelectorAll("[data-i18n]").forEach(el => { if (el.dataset.en === undefined) el.dataset.en = el.textContent; el.textContent = t(el.dataset.en); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { if (el.dataset.en === undefined) el.dataset.en = el.innerHTML.trim(); el.innerHTML = t(el.dataset.en); });
+  document.querySelectorAll("[data-i18n-title]").forEach(el => el.title = t(el.dataset.i18nTitle));
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => el.placeholder = t(el.dataset.i18nPh));
+  $("#homeLink").title = t("Home");
+  const lb = $("#uiLangBtn"); lb.textContent = UI === "hi" ? "English" : "हिंदी";
+  lb.title = UI === "hi" ? "Switch to English" : "हिंदी में देखें"; lb.lang = UI === "hi" ? "en" : "hi";
+  $("#footCopy").textContent = t("© {y} Centre for Development of Advanced Computing (C-DAC). All rights reserved.", {y: new Date().getFullYear()});
+  $("#footDev").innerHTML = `<b>${t("Developed by C-DAC Centre in North East")}</b>`;
+  setMode(searchMode);
+  setWide($("#main").classList.contains("wide"));
+  applyTheme(document.documentElement.dataset.theme || "system");
+  lib.built = false;
+  if (!$("#empty").classList.contains("hidden")) renderHomeRecent(); else updateBookChip();
+  if (!$("#recentPanel").classList.contains("hidden")) renderRecentList();
+}
+$("#uiLangBtn").onclick = async () => {
+  UI = UI === "hi" ? "en" : "hi"; applyUI();
+  try { await fetch("/api/uilang", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ui: UI})}); } catch {}
+};
 
 // "RELATED: a; b; c" is the explanation's last line; show it as clickable chips instead
 function splitRelated(md){
@@ -1515,7 +1608,7 @@ async function copyRich(html, plain){
   return "plain";
 }
 function copyDone(btn, label, how){
-  btn.textContent = how === "rich" ? "Copied with formatting ✓" : "Copied as text ✓";
+  btn.textContent = t(how === "rich" ? "Copied with formatting ✓" : "Copied as text ✓");
   setTimeout(() => btn.textContent = label, 1800);
 }
 $("#copy").onclick = async () => {
@@ -1523,7 +1616,7 @@ $("#copy").onclick = async () => {
   const v = current.video, url = `https://youtu.be/${v.id}`;
   const html = richHTML(current.summary_md, {title: v.title, videoId: v.id,
     sub: `<p style="color:#5B5853;margin:0 0 8pt">${esc(v.channel || "")}${v.duration ? " · " + esc(v.duration) : ""} · <a href="${url}">${url}</a></p>`});
-  try { copyDone($("#copy"), "Copy notes", await copyRich(html, `# ${v.title}\n${url}\n\n${current.summary_md}`)); }
+  try { copyDone($("#copy"), t("Copy notes"), await copyRich(html, `# ${v.title}\n${url}\n\n${current.summary_md}`)); }
   catch { setStatus("Couldn't copy. Select the text manually.", true); }
 };
 
@@ -1590,6 +1683,7 @@ $("#f").onsubmit = e => {
   progStart("search");
   streamRun("/api/search", {query, lang: $("#lang").value, book: bookParam()});
 };
+applyUI();
 </script>
 </body>
 </html>
