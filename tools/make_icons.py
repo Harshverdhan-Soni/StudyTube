@@ -1,4 +1,4 @@
-"""Generates StudyTube's icon set and splash animation.
+"""Generates ekagra's icon set and splash animation.
 
 Outputs (relative to the app folder):
   icon.ico            multi-size Windows icon (16..256), small sizes hand-simplified

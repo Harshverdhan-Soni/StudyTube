@@ -1,4 +1,4 @@
-"""StudyTube: type a topic, get the single most relevant YouTube video
+"""ekagra (formerly StudyTube): type a topic, get the single most relevant YouTube video
 plus study notes from its transcript.
 
 All default services are free:
@@ -745,7 +745,7 @@ def single_video_events(query, video, out_lang, alternatives, redo=False):
 
 
 def busy_msg(e):
-    tip = "" if cfg("GROQ_API_KEY") else " Tip: add a free Groq key in Settings and StudyTube will switch to Groq automatically when Gemini is busy."
+    tip = "" if cfg("GROQ_API_KEY") else " Tip: add a free Groq key in Settings and ekagra will switch to Groq automatically when Gemini is busy."
     return "Gemini's free servers are overloaded right now (this is on Google's side). Try again in a minute." + tip
 
 
@@ -1346,7 +1346,7 @@ def save_env(updates):
     os.environ.update(updates)
 
 
-APP_VERSION = "5.5"
+APP_VERSION = "6.0"
 
 
 def settings_state():
@@ -1391,7 +1391,7 @@ def post_settings():
         except OSError as e:
             os.environ.update(upd)  # still works for this session
             return jsonify(settings_state() | {"save_error": f"Could not write {ENV_FILE}: {e}. "
-                                               "Move the StudyTube folder to Documents and reinstall."})
+                                               "Move the app folder to Documents and reinstall."})
     return jsonify(settings_state())
 
 

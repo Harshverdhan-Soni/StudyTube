@@ -1,4 +1,4 @@
-"""Desktop launcher for StudyTube.
+"""Desktop launcher for ekagra (formerly StudyTube).
 
 Starts the local server on a free port and opens it in its own app window
 (pywebview). If that is not possible, it opens an Edge/Chrome "app mode" window,
@@ -117,16 +117,20 @@ def splash_html(theme):
     if not gif_path.exists():
         gif_path = BASE / "static" / "splash.gif"
     gif = base64.b64encode(gif_path.read_bytes()).decode()
+    wm_path = BASE / "static" / "fonts" / "ekagra-wordmark.woff"
+    wm = base64.b64encode(wm_path.read_bytes()).decode() if wm_path.exists() else ""
     return f"""<!DOCTYPE html><html><head><meta charset="utf-8"><style>
 html,body{{margin:0;height:100%;background:{c["bg"]};color:{c["ink"]};font:15px system-ui,"Segoe UI",sans-serif;
   display:flex;align-items:center;justify-content:center;user-select:none;overflow:hidden}}
 .c{{text-align:center}} img{{width:160px;height:160px}}
-h1{{font-size:26px;margin:14px 0 4px;letter-spacing:-.01em;font-weight:800}} h1 span{{color:{c["accent"]}}}
+@font-face{{font-family:"ekagraWM";src:url(data:font/woff;base64,{wm}) format("woff");font-weight:800}}
+h1{{font:800 34px "ekagraWM",system-ui,sans-serif;margin:14px 0 4px;letter-spacing:-.01em}} h1 span{{color:{c["accent"]}}}
+.sub{{color:{c["muted"]};font-size:13px;margin:0 0 10px}}
 .tag{{color:{c["ink"]};font-weight:600;font-size:16px;margin:0 0 14px}}
 p{{color:{c["muted"]};margin:0}} .dots::after{{content:"";animation:d 1.2s steps(4) infinite}}
 @keyframes d{{0%{{content:""}}25%{{content:"."}}50%{{content:".."}}75%{{content:"..."}}}}
 </style></head><body><div class="c"><img src="data:image/gif;base64,{gif}" alt="">
-<h1>Study<span>Tube</span></h1><p class="tag">Study, not scroll.</p><p>Getting things ready<span class="dots"></span></p></div></body></html>"""
+<h1>ekagra<span>.</span></h1><p class="sub">Focused learning, from curiosity to mastery.</p><p class="tag">Study, not scroll.</p><p>Getting things ready<span class="dots"></span></p></div></body></html>"""
 
 
 SPLASH_MIN_SECONDS = 2.0   # one full page-turn of the animation
@@ -140,7 +144,7 @@ def main():
     try:
         import webview
         theme = chosen_theme()
-        window = webview.create_window("StudyTube", html=splash_html(theme), width=1400, height=900,
+        window = webview.create_window("ekagra", html=splash_html(theme), width=1400, height=900,
                                        min_size=(900, 600), background_color=THEME_COLORS[theme]["bg"],
                                        text_select=True, zoomable=True)
         splash_painted = threading.Event()
@@ -164,7 +168,7 @@ def main():
                 window.load_url(url)
             else:
                 window.load_html("<body style='background:#161614;color:#f87171;font:16px system-ui;"
-                                 "padding:40px'>StudyTube's engine did not start. See studytube.log "
+                                 "padding:40px'>ekagra's engine did not start. See studytube.log "
                                  "in the app folder.</body>")
             winshell.apply_window_icon()   # again, in case the first call was too early
 

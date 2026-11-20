@@ -1,9 +1,9 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title StudyTube setup
+title ekagra setup
 echo.
-echo  === StudyTube setup (one time) ===
+echo  === ekagra setup (one time) ===
 echo.
 
 set "PY=python"
@@ -29,11 +29,11 @@ echo  [3/4] Installing the app-window component...
 
 if not exist .env copy /y .env.example .env >nul
 
-echo  [4/4] Creating Desktop and Start Menu shortcuts (with the StudyTube icon)...
+echo  [4/4] Creating Desktop and Start Menu shortcuts (with the ekagra icon)...
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0make_shortcut.ps1" || goto :fail
 
 echo.
-echo  Done! Double-click "StudyTube" on your Desktop.
+echo  Done! Double-click "ekagra" on your Desktop.
 echo  The first time it opens, it will ask for your API keys.
 echo.
 pause

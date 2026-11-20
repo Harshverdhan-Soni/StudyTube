@@ -17,7 +17,7 @@ echo "[2/3] Installing libraries..."
 echo "[3/3] Creating desktop icon..."
 ENTRY="[Desktop Entry]
 Type=Application
-Name=StudyTube
+Name=ekagra
 Comment=Find the best video for a topic and read its summary
 Exec=\"$DIR/.venv/bin/python\" \"$DIR/launcher.py\"
 Path=$DIR
@@ -32,4 +32,4 @@ if [ -d "$DESK" ]; then
   chmod +x "$DESK/studytube.desktop"
   gio set "$DESK/studytube.desktop" metadata::trusted true 2>/dev/null || true
 fi
-echo "Done. Double-click StudyTube on your Desktop (or find it in the app menu)."
+echo "Done. Double-click ekagra on your Desktop (or find it in the app menu)."

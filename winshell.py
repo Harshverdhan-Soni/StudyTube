@@ -1,4 +1,4 @@
-"""Windows-only touches so StudyTube looks like a real app, not "Python".
+"""Windows-only touches so ekagra looks like a real app, not "Python".
 
 Why the Python icon shows up: the app runs inside pythonw.exe, so Windows groups the
 window under Python and uses python's icon. Fix:
@@ -48,7 +48,7 @@ def _our_windows():
 
 
 def _set_relaunch_props(hwnd):
-    """So 'Pin to taskbar' on the running window pins StudyTube, not Python."""
+    """So 'Pin to taskbar' on the running window pins ekagra, not Python."""
     try:
         import pythoncom
         from win32com.propsys import propsys, pscon
@@ -59,7 +59,7 @@ def _set_relaunch_props(hwnd):
     store = propsys.SHGetPropertyStoreForWindow(hwnd, propsys.IID_IPropertyStore)
     for key, value in ((pscon.PKEY_AppUserModel_ID, APP_ID),
                        (pscon.PKEY_AppUserModel_RelaunchCommand, command),
-                       (pscon.PKEY_AppUserModel_RelaunchDisplayNameResource, "StudyTube"),
+                       (pscon.PKEY_AppUserModel_RelaunchDisplayNameResource, "ekagra"),
                        (pscon.PKEY_AppUserModel_RelaunchIconResource, f"{ICON},0")):
         store.SetValue(key, propsys.PROPVARIANTType(value, pythoncom.VT_LPWSTR))
     store.Commit()

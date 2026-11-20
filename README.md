@@ -1,4 +1,4 @@
-# StudyTube
+# ekagra (formerly StudyTube)
 
 **Study, not scroll.** A distraction-free place to learn from YouTube: no feed, no Shorts, no autoplay. Just the one video you need and notes you can read instead.
 
@@ -11,11 +11,11 @@ You need **Python 3.9+** (Windows: install from python.org and tick *"Add python
 
 | OS | Do this |
 |---|---|
-| **Windows** | Unzip the folder somewhere permanent (e.g. `Documents\StudyTube`), then double-click **`INSTALL-Windows.bat`** |
+| **Windows** | Unzip the folder somewhere permanent (e.g. `Documents\ekagra`), then double-click **`INSTALL-Windows.bat`** |
 | **Linux** | `bash install-linux.sh` |
 | **macOS** | Right-click **`install-mac.command`**, then choose Open |
 
-The installer creates a **StudyTube icon on your Desktop** (and in the Start Menu on Windows).
+The installer creates a **ekagra icon on your Desktop** (and in the Start Menu on Windows).
 Double-click it and the app opens in its own window, with no terminal or browser tab.
 The first time, it asks for your keys. You can change them later with the ⚙ button.
 
@@ -31,7 +31,7 @@ The first time, it asks for your keys. You can change them later with the ⚙ bu
 **One Google key for both YouTube and Gemini.** Run this in Google Cloud Shell and copy the `keyString`:
 ```bash
 gcloud services enable youtube.googleapis.com generativelanguage.googleapis.com
-gcloud services api-keys create --display-name="StudyTube" \
+gcloud services api-keys create --display-name="ekagra" \
   --api-target=service=youtube.googleapis.com \
   --api-target=service=generativelanguage.googleapis.com
 ```

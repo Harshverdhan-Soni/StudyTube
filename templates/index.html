@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>StudyTube</title>
+<title>ekagra</title>
 <link rel="icon" type="image/png" href="/static/icon-192.png">
 <script src="/static/marked.min.js"></script>
 <script src="/static/purify.min.js"></script>
@@ -114,7 +114,10 @@
   h1 .home{cursor:pointer}
   .brand{display:flex;align-items:center;gap:12px;font-size:25px;font-weight:800;letter-spacing:-.015em;line-height:1}
   .brand .logo{width:40px;height:40px;display:block;flex:none}
-  .brand .wm{color:var(--ink)}
+  @font-face{font-family:"ekagraWM";src:url("/static/fonts/ekagra-wordmark.woff") format("woff");font-weight:800;font-display:swap}
+  .brand .bt{display:flex;flex-direction:column;gap:3px}
+  .brand .wm{color:var(--ink);font-family:"ekagraWM",system-ui,sans-serif;font-weight:800;font-size:27px;letter-spacing:-.01em}
+  .brand .tg{font-size:11px;font-weight:500;color:var(--muted,#8b887f);letter-spacing:0}
   .brand .wm span{color:#c2410c}
   :root[data-theme="dark"] .brand .wm span{color:#F7931E}
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .brand .wm span{color:#F7931E}}
@@ -175,7 +178,7 @@
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
   .seg button{border:0;border-radius:0;padding:5px 10px;font-size:12px;background:none;color:var(--muted)}
   .seg button.on{background:var(--accent);color:#fff}
-  /* ---- roadmap (inspired by roadmap.sh, in StudyTube colours) ---- */
+  /* ---- roadmap (inspired by roadmap.sh, in ekagra colours) ---- */
   .rm{--mile:#F7931E;--mile-ink:#1A1A18;--sub:#F3E7D8;--sub-ink:#1A1A18;--done:#16a34a;--doing:#3b82f6;--link:#8b887f}
   .rm-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;padding:14px 0 6px}
   .rm-eyebrow{font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--accent)}
@@ -336,7 +339,7 @@
 </head>
 <body>
 <header>
-  <h1><div class="home brand" id="homeLink" title="Home"><img class="logo" src="/static/icon-192.png" alt=""><span class="wm">Study<span>Tube</span></span></div>
+  <h1><div class="home brand" id="homeLink" title="Home"><img class="logo" src="/static/icon-192.png" alt=""><span class="bt"><span class="wm">ekagra<span>.</span></span><small class="tg">Focused learning, from curiosity to mastery.</small></span></div>
     <div class="hbtns"><button class="hbtn" id="bookChip" type="button"></button><button class="hbtn" id="recentBtn" title="Previously searched">🕘 Recent</button>
     <button class="hbtn" id="themeBtn" type="button" aria-label="Theme"></button>
     <button class="gear" id="gear" title="Settings">⚙</button></div></h1>
@@ -1497,7 +1500,7 @@ function sMsg(text, kind){
 function closeSetup(){ $("#setup").classList.add("hidden"); sMsg(""); }
 async function loadSettings(){
   try { settings = await (await fetch("/api/settings")).json(); }
-  catch { setStatus("Couldn't reach the StudyTube engine. Close the app and open it again.", true); return; }
+  catch { setStatus("Couldn't reach the ekagra engine. Close the app and open it again.", true); return; }
   $("#s_ver").textContent = "v" + (settings.version || "?");
   if (!settings.ready) { openSetup(); sMsg("Needed: " + settings.missing.join(", ")); }
 }
